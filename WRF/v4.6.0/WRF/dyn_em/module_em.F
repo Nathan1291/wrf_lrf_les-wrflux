@@ -190,6 +190,18 @@ END SUBROUTINE rk_step_prep
 SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                          ru_tend, rv_tend, rw_tend, ph_tend, t_tend,      &
                          ru_tendf, rv_tendf, rw_tendf, ph_tendf, t_tendf, &
+                         ! Changed Wrflux.
+                         th_save, dph_x, dph_y,                           &
+                         u_tend_pg,u_tend_cor_curv,                       &
+                         v_tend_pg,v_tend_cor_curv,                       &
+                         w_tend_pg,w_tend_cor_curv,                       &
+                         t_tend_damp,u_tend_damp,v_tend_damp,w_tend_damp, &
+                         ftx, fty, ftz, ftz_imp,                          &
+                         fux, fuy, fuz, fuz_imp,                          &
+                         fvx, fvy, fvz, fvz_imp,                          &
+                         fwx, fwy, fwz, fwz_imp,                          &
+                         qv,                                              &
+                         !# End changed block.
                          mu_tend, u_save, v_save, w_save, ph_save,        &
                          t_save, mu_save, RTHFTEN,                        &
                          ru, rv, rw, ww, wwE, wwI,                        &
@@ -239,6 +251,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                                          v,       &
                                                          w,       &
                                                          t,       &
+                                                         ! Changed Wrflux.
+                                                         qv,      &
+                                                         ! End changed block.
                                                          ph,      &
                                                          u_old,   &
                                                          v_old,   &
@@ -269,7 +284,17 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                                           v_save, &
                                                           w_save, &
                                                          ph_save, &
-                                                          t_save
+                                                          t_save, &
+                                                         ! Changed Wrflux.
+                                                        th_save,  &
+                                       u_tend_pg,u_tend_cor_curv, &
+                                       v_tend_pg,v_tend_cor_curv, &
+                                       w_tend_pg,w_tend_cor_curv, &
+                                          ftx, fty, ftz, ftz_imp, &
+                                          fux, fuy, fuz, fuz_imp, &
+                                          fvx, fvy, fvz, fvz_imp, &
+                                          fwx, fwy, fwz, fwz_imp
+                                                         ! End changed block.
 
    REAL , DIMENSION( ims:ime , kms:kme, jms:jme  ) ,               &
                                         INTENT(INOUT) :: ru_tendf, &
@@ -277,7 +302,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                                          rw_tendf, &
                                                          t_tendf,  &
                                                          ph_tendf, &
-                                                         cqw
+                                                         cqw,      &
+                                                         ! Changed Wrflux.
+                                                      t_tend_damp, &
+                                                      u_tend_damp, &
+                                                      v_tend_damp, &
+                                                      w_tend_damp
+                                                         ! End changed block.
 
    REAL , DIMENSION( ims:ime , jms:jme ) ,         INTENT(  OUT) :: mu_tend, &
                                                                     mu_save
@@ -334,11 +365,25 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
    REAL, INTENT( OUT ) :: max_horiz_cfl
    REAL, INTENT( OUT ) :: max_vert_cfl
 
+   ! Changed Wrflux. 
+   REAL , DIMENSION( ims:ime , kms:kme, jms:jme  ) :: t_tend_dummy,        &
+                                                      th_save_old,         &
+                                                      ru_tend_old,         &
+                                                      rv_tend_old,         &
+                                                      rw_tend_old
+   ! End changed block.
+
    REAL    :: kdift, khdq, kvdq, cfn, cfn1, cf1, cf2, cf3
    INTEGER :: i,j,k
    INTEGER :: time_step
    INTEGER :: rk_order
    REAL    :: dt_step
+
+   ! Changed Wrflux.
+   LOGICAL :: output_fluxes, output_fluxes_s, advect_thdry,   &
+              save_ttend, save_utend, save_vtend, save_wtend, &
+              save_utend_end, save_vtend_end, save_wtend_end
+   ! End changed block.
 
 ! IEVA declarations
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme ) :: wwE, wwI  
@@ -487,10 +532,21 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
    ENDIF
 
 ! Okay do normal advection now....using the wwE array
+   ! Changed Wrflux.
+   IF ((rk_step == rk_order) .and. config_flags%output_ures_fluxes) THEN
+     output_fluxes = .true.
+   ELSE
+     output_fluxes = .false.
+   ENDIF
+   ! End changed block.
 
    IF( (rk_step == rk_order) .and. ( adv_opt == WENO_MOM ) ) THEN
 
-     CALL advect_weno_u ( u, u , ru_tend, ru, rv, wwE,  &
+     ! Changed Wrflux.
+     CALL advect_weno_u ( u, u , ru_tend,               &
+                          fux, fuy, fuz, output_fluxes, &
+                          ru, rv, wwE,                  &
+     ! End changed block.
                           c1h, c2h,                     &
                           mut, time_step, config_flags, &
                           msfux, msfuy, msfvx, msfvy,   &
@@ -502,7 +558,11 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
 
    ELSE
 
-     CALL advect_u ( u, u , ru_tend, ru, rv, wwE,  &
+     ! Changed Wrflux.
+     CALL advect_u ( u, u , ru_tend,             &
+                     fux, fuy, fuz, output_fluxes, &
+                     ru, rv, wwE,                  &
+     ! End changed block.
                      c1h, c2h,                     &
                      mut, time_step, config_flags, &
                      msfux, msfuy, msfvx, msfvy,   &
@@ -515,7 +575,10 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
 
    IF( ieva ) THEN
 
-     CALL advect_u_implicit ( u, u_old, ru_tend, ru, rv, wwI,  &
+     ! Changed Wrflux.
+     CALL advect_u_implicit ( u, u_old, ru_tend, fuz_imp,      &
+                              output_fluxes, ru, rv, wwI,      &
+     ! End changed block.
                               c1h, c2h,                        &
                               muu_old, muu, muu_new,           &
                               config_flags,                    &
@@ -529,9 +592,19 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               its, ite, jts, jte, kts, kte )
    ENDIF
 
-   IF( (rk_step == rk_order) .and. ( adv_opt == WENO_MOM ) ) THEN
+   ! Changed Wrflux
+   IF ((rk_step == rk_order) .and. config_flags%output_vres_fluxes) THEN
+      output_fluxes = .true.
+   ELSE
+      output_fluxes = .false.
+   ENDIF
+   ! End changed block.
 
-      CALL advect_weno_v ( v, v , rv_tend, ru, rv, wwE,  &
+   IF( (rk_step == rk_order) .and. ( adv_opt == WENO_MOM ) ) THEN
+      ! Changed Wrflux
+      CALL advect_weno_v ( v, v , rv_tend,               &
+                           fvx, fvy, fvz, output_fluxes, &
+                           ru, rv, wwE,                  &
                            c1h, c2h,                     &
                            mut, time_step, config_flags, &
                            msfux, msfuy, msfvx, msfvy,   &
@@ -540,10 +613,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                            ids, ide, jds, jde, kds, kde, &
                            ims, ime, jms, jme, kms, kme, &
                            its, ite, jts, jte, kts, kte )
+      ! End changed block.
 
    ELSE
-
-     CALL advect_v ( v, v , rv_tend, ru, rv, wwE,  &
+      ! Changed Wrflux
+      CALL advect_v ( v, v , rv_tend,              &
+                     fvx, fvy, fvz, output_fluxes, &
+                     ru, rv, wwE,                  &
                      c1h, c2h,                     &
                      mut, time_step, config_flags, &
                      msfux, msfuy, msfvx, msfvy,   &
@@ -552,11 +628,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                      ids, ide, jds, jde, kds, kde, &
                      ims, ime, jms, jme, kms, kme, &
                      its, ite, jts, jte, kts, kte )
+      ! End changed block.
    ENDIF
 
    IF( ieva ) THEN
-     
-     CALL advect_v_implicit ( v, v_old, rv_tend, ru, rv, wwI,  &
+      ! Changed Wrflux
+     CALL advect_v_implicit ( v, v_old, rv_tend, fvz_imp,      &
+                              output_fluxes, ru, rv, wwI,      &
                               c1h, c2h,                        &
                               muv_old, muv, muv_new,           &
                               config_flags,                    &
@@ -568,13 +646,23 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               ids, ide, jds, jde, kds, kde,    &
                               ims, ime, jms, jme, kms, kme,    &
                               its, ite, jts, jte, kts, kte )
+      ! End changed block.
    ENDIF
 
    IF (non_hydrostatic) THEN
+     ! Changed Wrflux
+     IF ((rk_step == config_flags%rk_ord) .and. config_flags%output_wres_fluxes) THEN
+        output_fluxes = .true.
+     ELSE
+        output_fluxes = .false.
+     ENDIF
+     ! End changed block.
 
      IF( (rk_step == rk_order) .and. ( adv_opt == WENO_MOM ) ) THEN
-
-       CALL advect_weno_w ( w, w, rw_tend, ru, rv, wwE,   &
+     ! Changed Wrflux
+       CALL advect_weno_w ( w, w, rw_tend,                &
+                            fwx, fwy, fwz, output_fluxes, &
+                            ru, rv, wwE,                  &
                             c1h, c2h,                     &
                             mut, time_step, config_flags, &
                             msfux, msfuy, msfvx, msfvy,   &
@@ -583,10 +671,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                             ids, ide, jds, jde, kds, kde, &
                             ims, ime, jms, jme, kms, kme, &
                             its, ite, jts, jte, kts, kte )
+     ! End changed block.
 
      ELSE
-     
-       CALL advect_w ( w, w, rw_tend, ru, rv, wwE,   &
+     ! Changed Wrflux
+       CALL advect_w ( w, w, rw_tend,                &
+                       fwx, fwy, fwz, output_fluxes, &
+                       ru, rv, wwE,                  &
                        c1h, c2h,                     &
                        mut, time_step, config_flags, &
                        msfux, msfuy, msfvx, msfvy,   &
@@ -596,10 +687,45 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                        ims, ime, jms, jme, kms, kme, &
                        its, ite, jts, jte, kts, kte )
      ENDIF
-
+     ! End changed block.
    ENDIF  ! non-hydrostatic
 
 !  theta flux divergence
+
+   ! Changed Wrflux.
+   advect_thdry = .false.
+   IF ((rk_step == config_flags%rk_ord) .and. config_flags%output_tres_fluxes) THEN
+      output_fluxes = .true.
+
+      !repeat advection routines with full (dry/moist) theta without saving the tendency
+      IF (config_flags%output_dry_theta_fluxes .and. (config_flags%use_theta_m .eq. 1)) THEN
+         !convert to dry theta
+         advect_thdry = .true.
+         t_tend_dummy(:,:,:) = 0
+         DO j = jms,jme
+         DO k = kms,kme
+         DO i = ims,ime
+            th_save(i,k,j) = (t(i,k,j)+t0)/(1.+rvovrd*qv(i,k,j)) - t0
+         ENDDO
+         ENDDO
+         ENDDO
+         IF( ieva ) THEN
+            DO j = jms,jme
+            DO k = kms,kme
+            DO i = ims,ime
+               th_save_old(i,k,j) = (t_old(i,k,j)+t0)/(1.+rvovrd*qv(i,k,j)) - t0
+            ENDDO
+            ENDDO
+            ENDDO
+         ENDIF
+      ELSE
+         th_save(:,:,:) = t(:,:,:)
+      ENDIF
+   ELSE
+      output_fluxes = .false.
+   ENDIF
+   output_fluxes_s = output_fluxes
+   ! End changed block.
 
 ! 11/2016 ERM: Use WENO for theta flux on 3rd RK step if using WENO_SCALAR or WENOPD_SCALAR
 ! to be consistent with other scalar fluxes
@@ -608,10 +734,30 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
      .or. config_flags%moist_adv_opt == WENO_SCALAR       &
      .or. config_flags%moist_adv_opt == WENOPD_SCALAR )   &
      .and. (rk_step == rk_order) ) THEN
-     
+
+        ! Changed Wrflux.
+        IF (advect_thdry) THEN
+           CALL advect_scalar_weno ( th_save, th_save, t_tend_dummy, &
+                                    ftx, fty, ftz, .true.,         &
+                                    ru, rv, wwE,                    &
+                                    c1h, c2h, mut, time_step,      &
+                                    config_flags,                  &
+                                    msfux, msfuy, msfvx, msfvy,    &
+                                    msftx, msfty, fnm, fnp,        &
+                                    rdx, rdy, rdnw,                &
+                                    ids, ide, jds, jde, kds, kde,  &
+                                    ims, ime, jms, jme, kms, kme,  &
+                                    its, ite, jts, jte, kts, kte  )
+           output_fluxes_s = .false.
+        ENDIF
+        ! End changed block.
+
 ! also use weno for monotonic scalar option so that the h_ and z_tendency arrays are not needed
 
-     CALL advect_scalar_weno ( t, t, t_tend, ru, rv, wwE,     &
+     ! Changed Wrflux.
+     CALL advect_scalar_weno ( t, t, t_tend, ftx, fty, ftz,   &
+                               output_fluxes_s, ru, rv, wwE,    &
+     ! End changed block.
                                c1h, c2h, mut, time_step,      &
                                config_flags,                  &
                                msfux, msfuy, msfvx, msfvy,    &
@@ -621,8 +767,23 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                ims, ime, jms, jme, kms, kme,  &
                                its, ite, jts, jte, kts, kte  )
    ELSE
+     IF (advect_thdry) THEN
+        CALL advect_scalar ( th_save, th_save, t_tend_dummy, &
+                             ftx, fty, ftz, .true.,        &
+                             ru, rv, wwE,                  &
+                             c1h, c2h,                     &
+                             mut, time_step, config_flags, &
+                             msfux, msfuy, msfvx, msfvy,   &
+                             msftx, msfty, fnm, fnp,       &
+                             rdx, rdy, rdnw,               &
+                             ids, ide, jds, jde, kds, kde, &
+                             ims, ime, jms, jme, kms, kme, &
+                             its, ite, jts, jte, kts, kte )
+        output_fluxes_s = .false.
+     ENDIF
 
-     CALL advect_scalar ( t, t, t_tend, ru, rv, wwE,    &
+     CALL advect_scalar ( t, t, t_tend, ftx, fty, ftz,  &
+                          output_fluxes_s, ru, rv, wwE, &
                           c1h, c2h,                     &
                           mut, time_step, config_flags, &
                           msfux, msfuy, msfvx, msfvy,   &
@@ -631,12 +792,32 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                           ids, ide, jds, jde, kds, kde, &
                           ims, ime, jms, jme, kms, kme, &
                           its, ite, jts, jte, kts, kte )
+     # End changed block.
 
    ENDIF
 
    IF( ieva ) THEN
-      
-     CALL advect_s_implicit ( t, t_old, t_tend, ru, rv, wwI,  &
+     ! Changed Wrflux.
+     IF (advect_thdry) THEN
+        CALL advect_s_implicit ( th_save, th_save_old,           &
+                                 t_tend_dummy, ftz_imp,          &
+                                 output_fluxes, ru, rv, wwI,     &
+                                 c1h, c2h,                       &
+                                 mut_old, mut, mut_new,          &
+                                 config_flags,                   &
+                                 msfux, msfuy, msfvx, msfvy,     &
+                                 msftx, msfty,                   &
+                                 fnm, fnp,                       &
+                                 dt_step,                        &
+                                 rdx, rdy, rdnw,                 &
+                                 ids, ide, jds, jde, kds, kde,   &
+                                 ims, ime, jms, jme, kms, kme,   &
+                                 its, ite, jts, jte, kts, kte )
+        output_fluxes = .false.
+     ENDIF
+     CALL advect_s_implicit ( t, t_old, t_tend, ftz_imp,      &
+                              output_fluxes, ru, rv, wwI,     &
+     ! End changed block.
                               c1h, c2h,                       &
                               mut_old, mut, mut_new,          &
                               config_flags,                   &
@@ -648,7 +829,6 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               ids, ide, jds, jde, kds, kde,   &
                               ims, ime, jms, jme, kms, kme,   &
                               its, ite, jts, jte, kts, kte )
-
    ENDIF
      
    IF ( config_flags%cu_physics == GDSCHEME  .OR.     &
@@ -664,8 +844,10 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                     its, ite, jts, jte, kts, kte     )
 
    END IF
-
    CALL rhs_ph( ph_tend, u, v, wwE, ph, ph, phb, w, &
+                ! Changed Wrflux.
+                dph_x, dph_y,                      &
+                ! End changed block.
                 mut, muu, muv,                     &
                 c1f, c2f,                          &
                 fnm, fnp,                          &
@@ -675,6 +857,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                 msftx, msfty,                      &
                 non_hydrostatic,                   &
                 config_flags,                      &
+                ! Changed Wrflux.
+                rk_step,                           &
+                ! End changed block.
                 ids, ide, jds, jde, kds, kde,      &
                 ims, ime, jms, jme, kms, kme,      &
                 its, ite, jts, jte, kts, kte      )
@@ -695,9 +880,15 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                   its, ite, jts, jte, kts, kte )
 
      IF (non_hydrostatic) THEN
-      
-       CALL advect_w_implicit ( w, w_old, rw_tend,              &
-                                ru_tend, rv_tend, ht, wwI,      &
+      ! Changed Wrflux.
+      IF ((rk_step == config_flags%rk_ord) .and. config_flags%output_wres_fluxes) THEN
+        output_fluxes = .true.
+      ELSE
+        output_fluxes = .false.
+      ENDIF
+       CALL advect_w_implicit ( w, w_old, rw_tend, fwz_imp,     &
+                                output_fluxes,                  &
+      ! End changed block.
                                 ph, ph_old, ph_tend,            &
                                 c1f, c2f, cf1, cf2, cf3,        &
                                 mut_old, mut, mut_new,          &
@@ -713,6 +904,48 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
      ENDIF
      
    ENDIF  ! IEVA
+     ! Changed Wrflux.
+     save_ttend = .false.
+     save_utend = .false.
+     save_vtend = .false.
+     save_wtend = .false.
+     save_utend_end = .false.
+     save_vtend_end = .false.
+     save_wtend_end = .false.
+     IF (config_flags%output_t_fluxes .eq. 1) THEN
+       save_ttend = .true.
+       IF (rk_step == 1) THEN
+         t_tend_damp(:,:,:) = 0
+       ENDIF
+     ENDIF
+     IF (config_flags%output_u_fluxes .eq. 1) THEN
+       save_utend = .true.
+       IF (rk_step == 1) THEN
+         u_tend_damp(:,:,:) = 0
+       ELSEIF (rk_step == config_flags%rk_ord) THEN
+         save_utend_end = .true.
+         ru_tend_old(its:ite, kts:kte, jts:jte) = ru_tend(its:ite, kts:kte, jts:jte)
+       ENDIF
+     ENDIF
+     IF (config_flags%output_v_fluxes .eq. 1) THEN
+       save_vtend = .true.
+       IF (rk_step == 1) THEN
+         v_tend_damp(:,:,:) = 0
+       ELSEIF (rk_step == config_flags%rk_ord) THEN
+         save_vtend_end = .true.
+         rv_tend_old(its:ite, kts:kte, jts:jte) = rv_tend(its:ite, kts:kte, jts:jte)
+       ENDIF
+     ENDIF
+     IF (config_flags%output_w_fluxes .eq. 1) THEN
+       save_wtend = .true.
+       IF (rk_step == 1) THEN
+         w_tend_damp(:,:,:) = 0
+       ELSEIF (rk_step == config_flags%rk_ord) THEN
+         save_wtend_end = .true.
+         rw_tend_old(its:ite, kts:kte, jts:jte) = rw_tend(its:ite, kts:kte, jts:jte)
+       ENDIF
+     ENDIF
+     ! End changed block.
 
    CALL horizontal_pressure_gradient( ru_tend,rv_tend,                 &
                                        ph,alt,p,pb,al,php,cqu,cqv,     &
@@ -726,6 +959,30 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                        ims, ime, jms, jme, kms, kme,   &
                                        its, ite, jts, jte, kts, kte   )
 
+     ! Changed Wrflux.
+     ! reconstruct momentum tendencies from pressure gradient
+     ! and decouple from dry mass and map scale factors
+     ! TODOm: do inside pg function?
+     IF (save_utend_end) THEN
+          DO j = jts,min(jte,jde-1)
+          DO k = kts,min(kte,kde-1)
+          DO i = its,ite
+            u_tend_pg(i,k,j) = (ru_tend(i,k,j) - ru_tend_old(i,k,j))/(c1h(k)*muu(i,j)+c2h(k))*msfuy(i,j)
+          ENDDO
+          ENDDO
+          ENDDO
+     ENDIF
+     IF (save_vtend_end) THEN
+          DO j = jts,jte
+          DO k = kts,min(kte,kde-1)
+          DO i = its,min(ite,ide-1)
+            v_tend_pg(i,k,j) = (rv_tend(i,k,j) - rv_tend_old(i,k,j))/(c1h(k)*muv(i,j)+c2h(k))*msfvx(i,j)
+          ENDDO
+          ENDDO
+          ENDDO
+     ENDIF
+     ! End changed block.
+
    IF (non_hydrostatic) THEN
         CALL pg_buoy_w( rw_tend, p, cqw, mu, mub,       &
                         c1f,c2f,                        &
@@ -733,16 +990,42 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                         ids, ide, jds, jde, kds, kde,   &
                         ims, ime, jms, jme, kms, kme,   &
                         its, ite, jts, jte, kts, kte   )
+   ! Changed Wrflux.
+        IF (save_wtend_end) THEN
+              DO j = jts,min(jte,jde-1)
+              DO k = kts,kde
+              DO i = its,min(ite,ide-1)
+                w_tend_pg(i,k,j) = (rw_tend(i,k,j) - rw_tend_old(i,k,j))/(c1f(k)*mut(i,j)+c2f(k))*msfty(i,j)
+              ENDDO
+              ENDDO
+              ENDDO
+        ENDIF
    ENDIF
+   ! End changed block.
 
    CALL w_damp   ( rw_tend, max_vert_cfl,             &
                     max_horiz_cfl,                    &
                     u, v, ww, w, mut, c1f, c2f, rdnw, &
-                    rdx, rdy, msfux, msfuy, msfvx,    &
-                    msfvy, dt, config_flags,          &
+                    ! Changed Wrflux.
+                    rdx, rdy, msfux, msfuy, msfty, msfvx,  &
+                    msfvy, dt, w_tend_damp, save_wtend_end, &
+                    config_flags,                     &
+                    ! End changed block.
                     ids, ide, jds, jde, kds, kde,     &
                     ims, ime, jms, jme, kms, kme,     &
                     its, ite, jts, jte, kts, kte     )
+
+   ! Changed Wrflux.
+   IF (save_utend_end) THEN
+     ru_tend_old(its:ite, kts:kte, jts:jte) = ru_tend(its:ite, kts:kte, jts:jte)
+   ENDIF
+   IF (save_vtend_end) THEN
+     rv_tend_old(its:ite, kts:kte, jts:jte) = rv_tend(its:ite, kts:kte, jts:jte)
+   ENDIF
+   IF (save_wtend_end) THEN
+     rw_tend_old(its:ite, kts:kte, jts:jte) = rw_tend(its:ite, kts:kte, jts:jte)
+   ENDIF
+   ! End changed block.
 
    IF(config_flags%pert_coriolis) THEN
 
@@ -779,6 +1062,38 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                      ids, ide, jds, jde, kds, kde,   &
                      ims, ime, jms, jme, kms, kme,   &
                      its, ite, jts, jte, kts, kte   )
+
+   ! Changed Wrflux.
+   ! reconstruct momentum tendencies from coriolis and curvature
+   ! and decouple from dry mass and map scale factors
+   IF (save_utend_end) THEN
+        DO j = jts,min(jte,jde-1)
+        DO k = kts,min(kte,kde-1)
+        DO i = its,ite
+          u_tend_cor_curv(i,k,j) = (ru_tend(i,k,j) - ru_tend_old(i,k,j))/(c1h(k)*muu(i,j)+c2h(k))*msfuy(i,j)
+        ENDDO
+        ENDDO
+        ENDDO
+   ENDIF
+   IF (save_vtend_end) THEN
+        DO j = jts,jte
+        DO k = kts,min(kte,kde-1)
+        DO i = its,min(ite,ide-1)
+          v_tend_cor_curv(i,k,j) = (rv_tend(i,k,j) - rv_tend_old(i,k,j))/(c1h(k)*muv(i,j)+c2h(k))*msfvx(i,j)
+        ENDDO
+        ENDDO
+        ENDDO
+   ENDIF
+   IF (save_wtend_end) THEN
+        DO j = jts,min(jte,jde-1)
+        DO k = kts,kte
+        DO i = its,min(ite,ide-1)
+          w_tend_cor_curv(i,k,j) = (rw_tend(i,k,j) - rw_tend_old(i,k,j))/(c1f(k)*mut(i,j)+c2f(k))*msfty(i,j)
+        ENDDO
+        ENDDO
+        ENDDO
+   ENDIF
+   ! End changed block.
 
 ! Damping option added for Held-Suarez test (also uses lw option HELDSUAREZ)
 
@@ -878,8 +1193,10 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
     END IF diff_opt1
 
     IF ( diff_6th_opt .NE. 0 ) THEN
-
       CALL sixth_order_diffusion( 'u', u, ru_tendf, mut, dt,          &
+                                       ! Changed Wrflux.
+                                       u_tend_damp, save_utend,       &
+                                       ! End changed block.
                                        config_flags, c1h, c2h,        &
                                        diff_6th_opt, diff_6th_factor, &
                                        phb, ph,                       &
@@ -892,6 +1209,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                        its, ite, jts, jte, kts, kte )
 
       CALL sixth_order_diffusion( 'v', v, rv_tendf, mut, dt,          &
+                                       ! Changed Wrflux.
+                                       v_tend_damp, save_vtend,       &
+                                       ! End changed block.
                                        config_flags, c1h, c2h,        &
                                        diff_6th_opt, diff_6th_factor, &
                                        phb, ph,                       &
@@ -905,6 +1225,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
 
       IF (non_hydrostatic)                                            &
       CALL sixth_order_diffusion( 'w', w, rw_tendf, mut, dt,          &
+                                       ! Changed Wrflux.
+                                       w_tend_damp, save_wtend,       &
+                                       ! End changed block.
                                        config_flags, c1f, c2f,        &
                                        diff_6th_opt, diff_6th_factor, &
                                        phb, ph,                       &
@@ -917,6 +1240,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                        its, ite, jts, jte, kts, kte )
 
       CALL sixth_order_diffusion( 'm', t,  t_tendf, mut, dt,          &
+                                       ! Changed Wrflux.
+                                       t_tend_damp, save_ttend,       &
+                                       ! End changed block.
                                        config_flags, c1h, c2h,        &
                                        diff_6th_opt, diff_6th_factor, &
                                        phb, ph,                       &
@@ -927,12 +1253,17 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                        ids, ide, jds, jde, kds, kde,  &
                                        ims, ime, jms, jme, kms, kme,  &
                                        its, ite, jts, jte, kts, kte )
-
     ENDIF
 
     IF( damp_opt .eq. 2 )                                      &
        CALL rk_rayleigh_damp( ru_tendf, rv_tendf,              &
                               rw_tendf, t_tendf,               &
+                              ! Changed Wrflux.
+                              t_tend_damp, u_tend_damp,        &
+                              v_tend_damp, w_tend_damp,        &
+                              save_ttend, save_utend,          &
+                              save_vtend, save_wtend,          &
+                              ! End changed block.
                               u, v, w, t, t_init,              &
                               c1h, c2h, c1f, c2f,              &
                               mut, muu, muv, ph, phb,          &
@@ -941,6 +1272,19 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               ids, ide, jds, jde, kds, kde,    &
                               ims, ime, jms, jme, kms, kme,    &
                               its, ite, jts, jte, kts, kte   )
+
+    ! Changed Wrflux.
+    ! convert to dry theta tendency
+    IF (config_flags%output_dry_theta_fluxes .and. ( config_flags%use_theta_m .eq. 1 ) .and. save_ttend) THEN
+      DO j = jts,min(jte,jde-1)
+      DO k = kts,min(kte,kde-1)
+      DO i = its,min(ite,ide-1)
+        t_tend_damp(i,k,j) = t_tend_damp(i,k,j)/(1. + rvovrd*qv(i,k,j))
+      ENDDO
+      ENDDO
+      ENDDO
+    ENDIF
+    ! End changed block.
 
     IF( rad_nudge .eq. 1 )                                     &
        CALL theta_relaxation( t_tendf, t, t_init,              &
@@ -1092,12 +1436,13 @@ SUBROUTINE rk_addtend_dry ( ru_tend, rv_tend, rw_tend, ph_tend, t_tend,      &
 END SUBROUTINE rk_addtend_dry
 
 !-------------------------------------------------------------------------------
-
 SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                             tenddec,                         &
                             rk_step, dt_step,                &
+                            ! Changed Wrflux.
                             ru, rv, ww, wwE, wwI,            &  
-                            u_old, v_old,                    &  
+                            u_old, v_old,                    &
+                            ! End changed block.  
                             mut, mub, mu_old,                &
                             c1h, c2h, c1f, c2f, alt,         &
                             scalar_old, scalar,              &
@@ -1115,7 +1460,12 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                             mix2_off, mix6_off,              &
                             ids, ide, jds, jde, kds, kde,    &
                             ims, ime, jms, jme, kms, kme,    &
-                            its, ite, jts, jte, kts, kte    )
+                            its, ite, jts, jte, kts, kte,    &
+                            ! Changed Wrflux.
+                            fqx, fqy, fqz, fqz_imp,          &
+                            output_fluxes_in,                &
+                            q_tend_damp, t_tend_damp, th_phy )
+                            ! End changed block.
 
    IMPLICIT NONE
 
@@ -1186,6 +1536,14 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
    INTEGER, INTENT(IN   ) :: adv_opt          
    LOGICAL, INTENT(IN   ) :: mix2_off, mix6_off
 
+   ! Changed Wrflux.
+   LOGICAL, OPTIONAL, INTENT(IN   ) :: output_fluxes_in
+   REAL, OPTIONAL,DIMENSION(ims:ime, kms:kme, jms:jme  ), INTENT(OUT  ) :: q_tend_damp,  &
+                                                                           th_phy,       &
+                                                                           fqx, fqy, fqz, fqz_imp
+   REAL, OPTIONAL, DIMENSION(ims:ime, kms:kme, jms:jme  ), INTENT(INOUT) :: t_tend_damp
+   ! End changed block.
+
    ! Local data
   
    INTEGER :: im, i,j,k
@@ -1194,6 +1552,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
    REAL    :: dt         ! This is the large time step computed below
 
    REAL    :: khdq, kvdq, tendency
+   ! Changed Wrflux.
+   LOGICAL :: output_fluxes, save_qtend
+   ! End changed block.
 
 ! IEVA variables
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: wwE, wwI  
@@ -1243,6 +1604,14 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
    
    CALL nl_get_time_step ( 1, time_step )
 
+   ! Changed Wrflux.
+   IF (present(output_fluxes_in)) THEN
+     output_fluxes = output_fluxes_in
+   ELSE
+     output_fluxes = .false.
+   ENDIF
+   ! End changed block.
+
    scalar_loop : DO im = scs, sce
 
      CALL zero_tend ( advect_tend(ims,kms,jms),     &
@@ -1267,6 +1636,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
         CALL advect_scalar_pd       ( scalar(ims,kms,jms,im),             &
                                       scalar_old(ims,kms,jms,im),         &
                                       advect_tend(ims,kms,jms),           &
+                                      ! Changed Wrflux.
+                                      fqx, fqy, fqz, output_fluxes,       &
+                                      ! End changed block.
                                       h_tendency(ims,kms,jms),            &
                                       z_tendency(ims,kms,jms),            &
                                       ru, rv, wwE, c1h, c2h,              &
@@ -1274,7 +1646,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                       time_step, config_flags, tenddec,   &
                                       msfux, msfuy, msfvx, msfvy,         &
                                       msftx, msfty, fnm, fnp,             &
-                                      rdx, rdy, rdnw, dt_step,            &  
+                                      ! Changed Wrflux.
+                                      rdx, rdy, rdnw, dt_step,            &
+                                      ! End changed block.
                                       ids, ide, jds, jde, kds, kde,       &
                                       ims, ime, jms, jme, kms, kme,       &
                                       its, ite, jts, jte, kts, kte     )
@@ -1284,6 +1658,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
         CALL advect_scalar_mono       ( scalar(ims,kms,jms,im),             &
                                         scalar_old(ims,kms,jms,im),         &
                                         advect_tend(ims,kms,jms),           &
+                                        ! Changed Wrflux.
+                                        fqx, fqy, fqz, output_fluxes,       &
+                                        ! End changed block.
                                         h_tendency(ims,kms,jms),            &
                                         z_tendency(ims,kms,jms),            &
                                         ru, rv, wwE, wwI, c1h, c2h,         &
@@ -1291,7 +1668,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                         config_flags, tenddec,              &
                                         msfux, msfuy, msfvx, msfvy,         &
                                         msftx, msfty, fnm, fnp,             &
+                                        ! Changed Wrflux.
                                         rdx, rdy, rdnw, dt_step,            &
+                                        ! End changed block.
                                         ids, ide, jds, jde, kds, kde,       &
                                         ims, ime, jms, jme, kms, kme,       &
                                         its, ite, jts, jte, kts, kte     )
@@ -1301,6 +1680,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
         CALL advect_scalar_weno ( scalar(ims,kms,jms,im),        &
                                   scalar(ims,kms,jms,im),        &
                                   advect_tend(ims,kms,jms),      &
+                                  ! Changed Wrflux.
+                                  fqx, fqy, fqz, output_fluxes,  &
+                                  ! End changed block.
                                   ru, rv, wwE, c1h, c2h,         &
                                   mut, time_step,                &
                                   config_flags,                  &
@@ -1316,6 +1698,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
         CALL advect_scalar_wenopd   ( scalar(ims,kms,jms,im),             &
                                       scalar_old(ims,kms,jms,im),         &
                                       advect_tend(ims,kms,jms),           &
+                                      ! Changed Wrflux.
+                                      fqx, fqy, fqz, output_fluxes,       &
+                                      ! End changed block.
                                       ru, rv, wwE, c1h, c2h,              &
                                       mut, mub, mu_old,                   &
                                       time_step, config_flags,            &
@@ -1331,6 +1716,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
         CALL advect_scalar     ( scalar(ims,kms,jms,im),        &
                                  scalar(ims,kms,jms,im),        &
                                  advect_tend(ims,kms,jms),      &
+                                 ! Changed Wrflux.
+                                 fqx, fqy, fqz, output_fluxes,       &
+                                 ! End changed block.
                                  ru, rv, wwE, c1h, c2h,         &
                                  mut, time_step,                &
                                  config_flags,                  &
@@ -1348,6 +1736,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
        CALL advect_s_implicit ( scalar(ims,kms,jms,im),         &
                                 scalar_old(ims,kms,jms,im),     &
                                 advect_tend(ims,kms,jms),       &
+                                ! Changed Wrflux.
+                                fqz_imp, output_fluxes,         &
+                                ! End changed block.
                                 ru, rv, wwI,                    &
                                 c1h, c2h,                       &
                                 mut_old, mut, mut,              &
@@ -1360,7 +1751,6 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                 ids, ide, jds, jde, kds, kde,   &
                                 ims, ime, jms, jme, kms, kme,   &
                                 its, ite, jts, jte, kts, kte )
-                               
      ENDIF
     
      IF((config_flags%cu_physics == GDSCHEME .OR. config_flags%cu_physics == G3SCHEME .OR. &
@@ -1418,11 +1808,22 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
 
        ENDIF diff_opt1
 
+       ! Changed Wrflux.
+       save_qtend = .false.
+       IF  (moist_step .and. ( im == P_QV) .and. (config_flags%output_q_fluxes .eq. 1)) THEN
+         save_qtend = .true.
+         q_tend_damp(:,:,:) = 0
+       ENDIF
+       ! End changed block.
+
        IF ( (diff_6th_opt .NE. 0) .and. (.not. mix6_off) ) THEN
 
          CALL sixth_order_diffusion( 'm', scalar(ims,kms,jms,im),        &
                                           scalar_tends(ims,kms,jms,im),  &
                                           mut, dt_step,                  &
+                                          ! Changed Wrflux.
+                                          q_tend_damp, save_qtend,       &
+                                          ! End changed block.
                                           config_flags, c1h, c2h,        &
                                           diff_6th_opt, diff_6th_factor, &
                                           phb, ph,                       &
@@ -1433,7 +1834,21 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                           ids, ide, jds, jde, kds, kde,  &
                                           ims, ime, jms, jme, kms, kme,  &
                                           its, ite, jts, jte, kts, kte )
+
+         ! Changed Wrflux.
+         ! convert t_tend_damp to dry theta
+         IF ((config_flags%output_t_fluxes .eq. 1) .and. config_flags%output_dry_theta_fluxes .and. &
+            (config_flags%use_theta_m .eq. 1) .and. save_qtend) THEN
+           DO j = jts,min(jte,jde-1)
+           DO k = kts,min(kte,kde-1)
+           DO i = its,min(ite,ide-1)
+             t_tend_damp(i,k,j) = t_tend_damp(i,k,j) - rvovrd*q_tend_damp(i,k,j)*th_phy(i,k,j)/(1 + rvovrd*scalar(i,k,j,P_QV))
+           ENDDO
+           ENDDO
+           ENDDO
+         ENDIF
        ENDIF
+         ! End changed block.
        
      ENDIF rk_step_1
 

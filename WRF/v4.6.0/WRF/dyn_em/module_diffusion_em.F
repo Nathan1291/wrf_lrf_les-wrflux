@@ -2867,6 +2867,10 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                     chem_tendf, n_chem,                        &
                                     scalar_tendf, n_scalar,                    &
                                     tracer_tendf, n_tracer,                    &
+                                    ! Changed Wrflux.
+                                    ftx_sgs, fty_sgs, fqx_sgs, fqy_sgs,          &
+                                    fux_sgs, fvx_sgs, fvy_sgs, fwx_sgs, fwy_sgs,    &
+                                    ! End changed block.
                                     thp, theta, tke, config_flags,             &
                                     defor11, defor22, defor12,                 &
                                     defor13, defor23,                          &
@@ -2956,6 +2960,11 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                                                     rdzw, &
                                                                      rho
 
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(OUT) ::  &
+                                    ftx_sgs, fty_sgs, fqx_sgs, fqy_sgs,  &
+                                    fux_sgs, fvx_sgs, fvy_sgs, fwx_sgs, fwy_sgs
+   ! End changed block.
 
    REAL ,                                        INTENT(IN   ) ::    rdx, &
                                                                      rdy
@@ -2965,8 +2974,12 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
    :: nba_mij
 
 ! LOCAL VARS
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme)  ::  H1, H2, dummy_tend
 
-   INTEGER :: im, ic, is
+   INTEGER :: im, ic, is, i, j, k
+   REAL :: rho_stag
+   ! End changed block.
 
 !  REAL , DIMENSION(its-1:ite+1, kts:kte, jts-1:jte+1)       ::     xkhh
 
@@ -3006,7 +3019,67 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                    ims, ime, jms, jme, kms, kme,           &
                                    its, ite, jts, jte, kts, kte           )
 
-    CALL horizontal_diffusion_s  ( rt_tendf, config_flags,                 &
+    ! Changed Wrflux.
+    IF (config_flags%output_sgs_fluxes) THEN
+        IF (config_flags%output_usgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                fux_sgs(i,k,j) = nba_mij(i,k,j,P_m11)*rho(i,k,j)
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+        IF (config_flags%output_vsgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                fvy_sgs(i,k,j) = nba_mij(i,k,j,P_m22)*rho(i,k,j)
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+        IF (config_flags%output_usgs_fluxes .or. config_flags%output_vsgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                fvx_sgs(i,k,j) = nba_mij(i,k,j,P_m12)* .25 * ( rho(i-1,k,j  ) + rho(i,k,j  )  +  &
+                                                               rho(i-1,k,j-1) + rho(i,k,j-1) )
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+        IF (config_flags%output_wsgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts+1,kte
+            DO i=its,ite
+               rho_stag = 0.5 * ( fnm(k) * ( rho(i-1,k  ,j) + rho(i,k  ,j) ) + &
+                                  fnp(k) * ( rho(i-1,k-1,j) + rho(i,k-1,j) ) )
+               fwx_sgs(i,k,j) = nba_mij(i,k,j,P_m13) * rho_stag
+               rho_stag = 0.5 * ( fnm(k) * ( rho(i,k  ,j-1) + rho(i,k  ,j) ) + &
+                                  fnp(k) * ( rho(i,k-1,j-1) + rho(i,k-1,j) ) )
+               fwy_sgs(i,k,j) = nba_mij(i,k,j,P_m23) * rho_stag
+            ENDDO
+            ENDDO
+            ENDDO
+            DO j=jts,jte
+            DO i=its,ite
+                !SGS w-tendency at sfc is 0
+                fwx_sgs(i,kts,j) = 0.
+                fwy_sgs(i,kts,j) = 0.
+            ENDDO
+            ENDDO
+        ENDIF
+    ENDIF
+
+    IF ((config_flags%output_tsgs_fluxes) .or. (config_flags%output_qsgs_fluxes)) THEN
+        !Initialize fluxes
+        H1(:,:,:) = 0
+        H2(:,:,:) = 0
+    ENDIF
+
+    CALL horizontal_diffusion_s  ( rt_tendf, H1, H2, config_flags,         &
+    ! End changed block.
                                    thp,                                    &
                                    msftx, msfty, msfux, msfuy,             &
                                    msfvx, msfvy, xkhh, rdx, rdy,           &
@@ -3017,9 +3090,44 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                    ims, ime, jms, jme, kms, kme,           &
                                    its, ite, jts, jte, kts, kte           )
 
+    ! Changed Wrflux.
+    IF ( config_flags%output_dry_theta_fluxes .and. ( config_flags%use_theta_m .EQ. 1 ) .and. &
+         config_flags%output_tsgs_fluxes) THEN
+        !output dry instead of moist theta flux, don't save tendency
+        CALL horizontal_diffusion_s  ( dummy_tend, H1, H2, config_flags, theta - t0, &
+                                       msftx, msfty, msfux, msfuy,             &
+                                       msfvx, msfvy, xkhh, rdx, rdy,           &
+                                       fnm, fnp, cf1, cf2, cf3,                &
+                                       zx, zy, rdz, rdzw, dnw, dn, rho,        &
+                                       .false.,                                &
+                                       ids, ide, jds, jde, kds, kde,           &
+                                       ims, ime, jms, jme, kms, kme,           &
+                                       its, ite, jts, jte, kts, kte            )
+    ENDIF
+
+    IF (config_flags%output_tsgs_fluxes) THEN
+      DO j=jts,min(jte,jde-1)
+      DO k=kts,min(kte,kde-1)
+      DO i=its,ite
+          ftx_sgs(i,k,j) = H1(i,k,j)
+      ENDDO
+      ENDDO
+      ENDDO
+      DO j=jts,jte
+      DO k=kts,min(kte,kde-1)
+      DO i=its,min(ite,ide-1)
+          fty_sgs(i,k,j) = H2(i,k,j)
+      ENDDO
+      ENDDO
+      ENDDO
+    ENDIF
+    ! End changed block.
+
     IF ( ((km_opt .eq. 2) .and. (.not.config_flags%tke_mix2_off))          & !XZ
         .or. (km_opt .eq. 5) )                                             & !XZ
-    CALL horizontal_diffusion_s  ( tke_tendf(ims,kms,jms),                 &
+    ! Changed Wrflux.
+    CALL horizontal_diffusion_s  ( tke_tendf(ims,kms,jms), H1, H2,         &
+    ! End changed block.
                                    config_flags,                           &
                                    tke(ims,kms,jms),                       & 
                                    msftx, msfty, msfux, msfuy,             &
@@ -3034,8 +3142,9 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
     IF ((n_moist .ge. PARAM_FIRST_SCALAR) .and. (.not.config_flags%moist_mix2_off)) THEN
 
       moist_loop: do im = PARAM_FIRST_SCALAR, n_moist
-
-          CALL horizontal_diffusion_s( moist_tendf(ims,kms,jms,im),       &
+          ! Changed Wrflux.
+          CALL horizontal_diffusion_s( moist_tendf(ims,kms,jms,im), H1, H2,  &
+          ! End changed block.
                                        config_flags,                      &
                                        moist(ims,kms,jms,im),             &
                                        msftx, msfty, msfux, msfuy,        &
@@ -3047,6 +3156,25 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                        ims, ime, jms, jme, kms, kme,      &
                                        its, ite, jts, jte, kts, kte      )
 
+          ! Changed Wrflux.
+          IF ( (im == P_QV) .and. config_flags%output_qsgs_fluxes) THEN
+            DO j=jts,min(jte,jde-1)
+            DO k=kts,min(kte,kde-1)
+            DO i=its,ite
+                fqx_sgs(i,k,j) = H1(i,k,j)
+            ENDDO
+            ENDDO
+            ENDDO
+            DO j=jts,jte
+            DO k=kts,min(kte,kde-1)
+            DO i=its,min(ite,ide-1)
+                fqy_sgs(i,k,j) = H2(i,k,j)
+            ENDDO
+            ENDDO
+            ENDDO
+          ENDIF
+          ! End changed block.
+
       ENDDO moist_loop
 
     ENDIF
@@ -3055,7 +3183,9 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
 
       chem_loop: do ic = PARAM_FIRST_SCALAR, n_chem
 
-        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic),     &
+        ! Changed Wrflux.
+        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic), H1, H2, &
+        ! End changed block.
                                      config_flags,                   &
                                      chem(ims,kms,jms,ic),           &
                                      msftx, msfty, msfux, msfuy,     &
@@ -3075,7 +3205,9 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
 
       tracer_loop: do ic = PARAM_FIRST_SCALAR, n_tracer
 
-        CALL horizontal_diffusion_s( tracer_tendf(ims,kms,jms,ic),     &
+        ! Changed Wrflux.
+        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic), H1, H2, &
+        ! End changed block.
                                      config_flags,                     &
                                      tracer(ims,kms,jms,ic),           &
                                      msftx, msfty, msfux, msfuy,       &
@@ -3094,7 +3226,9 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
 
       scalar_loop: do is = PARAM_FIRST_SCALAR, n_scalar
 
-        CALL horizontal_diffusion_s( scalar_tendf(ims,kms,jms,is),     &
+        ! Changed Wrflux.
+        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic), H1, H2, &
+        ! End changed block.
                                      config_flags,                     &
                                      scalar(ims,kms,jms,is),           &
                                      msftx, msfty, msfux, msfuy,       &
@@ -3708,8 +3842,9 @@ END SUBROUTINE horizontal_diffusion_w_2
 !=======================================================================
 !=======================================================================
 
-SUBROUTINE horizontal_diffusion_s (tendency, config_flags,                &
-                                   var,                                   &
+! Changed Wrflux.
+SUBROUTINE horizontal_diffusion_s (tendency, H1, H2, config_flags, var,   &
+! End changed block.
                                    msftx, msfty, msfux, msfuy,            &
                                    msfvx, msfvy, xkhh, rdx, rdy,          &
                                    fnm, fnp, cf1, cf2, cf3,               &
@@ -3747,6 +3882,11 @@ SUBROUTINE horizontal_diffusion_s (tendency, config_flags,                &
    REAL , DIMENSION( ims:ime, jms:jme) ,         INTENT(IN   ) ::   msfty
 
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: tendency
+
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(OUT)   ::        H1, &
+                                                                         H2
+   ! End changed block.
 
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(IN   ) ::         &
                                                                     xkhh, &
@@ -4006,6 +4146,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                     chem_tendf, n_chem,                       &
                                     scalar_tendf, n_scalar,                   &
                                     tracer_tendf, n_tracer,                   &
+                                    ! Changed Wrflux.
+                                    ftz_sgs, fqz_sgs, fuz_sgs, fvz_sgs, fwz_sgs,  &
+                                    ! End changed block.
                                     u_2, v_2,                                 &
                                     thp,u_base,v_base,t_base,qv_base,tke,     &
                                     theta,                                    &
@@ -4060,6 +4203,11 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme, n_tracer) ,               &
           INTENT(INOUT) ::                                   tracer_tendf
 
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(OUT) ::    &
+                                       ftz_sgs, fqz_sgs, fuz_sgs, fvz_sgs, fwz_sgs
+   ! End changed block.
+
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme, n_moist),                 &
           INTENT(INOUT) ::                                          moist
 
@@ -4097,7 +4245,10 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) ::    thp
 
 ! LOCAL VAR
-
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme)  ::  H3, dummy_tend
+   ! End changed block.
+   
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme)  ::    var_mix
 
    INTEGER :: im, i,j,k
@@ -4112,7 +4263,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
     REAL :: V0_u,V0_v,tao_xz,tao_yz,ustar,cd0
     REAL :: xsfc,psi1,vk2,zrough,lnz
     REAL :: heat_flux, moist_flux, heat_flux0
-    REAL :: cpm
+   ! Changed Wrflux.
+    REAL :: cpm, rho_stag
+   ! End changed block.
 !
 !FINE MODIFICA VARIABILI PER I FLUSSI
 !***************************************************************************
@@ -4242,7 +4395,49 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
   CASE DEFAULT
     CALL wrf_error_fatal( 'isfflx value invalid for diff_opt=2' )
   END SELECT vflux
-
+    ! Changed Wrflux.
+    IF (config_flags%output_sgs_fluxes) THEN
+        IF (config_flags%output_usgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                IF (k .eq. kts) THEN
+                  rho_stag = 0.5 * (rho(i-1,k,j) + rho(i,k,j))
+                ELSE
+                  rho_stag = 0.5 * ( fnm(k) * ( rho(i-1,k  ,j) + rho(i,k  ,j) ) + &
+                                     fnp(k) * ( rho(i-1,k-1,j) + rho(i,k-1,j) ) )
+                ENDIF
+                fuz_sgs(i,k,j) = nba_mij(i,k,j,P_m13) * rho_stag
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+        IF (config_flags%output_vsgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                IF (k .eq. kts) THEN
+                  rho_stag = 0.5 * (rho(i,k,j-1) + rho(i,k,j))
+                ELSE
+                  rho_stag = 0.5 * ( fnm(k) * ( rho(i,k  ,j-1) + rho(i,k  ,j) ) + &
+                                     fnp(k) * ( rho(i,k-1,j-1) + rho(i,k-1,j) ) )
+                ENDIF
+                fvz_sgs(i,k,j) = nba_mij(i,k,j,P_m23) * rho_stag
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+        IF (config_flags%output_wsgs_fluxes) THEN
+            DO j=jts,jte
+            DO k=kts,kte
+            DO i=its,ite
+                fwz_sgs(i,k,j) = nba_mij(i,k,j,P_m33)*rho(i,k,j)
+            ENDDO
+            ENDDO
+            ENDDO
+        ENDIF
+    ENDIF  
+    ! End changed block.
 !
 !  FINE MODIFICA al flusso di momento alla parete
 !*****************************************
@@ -4270,13 +4465,41 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
    END IF
 
-   CALL vertical_diffusion_s( rt_tendf, config_flags, var_mix, xkhv, &
+   ! Changed Wrflux.
+   IF ((config_flags%output_tsgs_fluxes) .or. (config_flags%output_qsgs_fluxes)) THEN
+       !Initialize flux
+       H3(:,:,:) = 0
+   ENDIF
+
+   CALL vertical_diffusion_s( rt_tendf, H3, config_flags, var_mix, xkhv, &
                               dn, dnw, rdz, rdzw, fnm, fnp, rho,     &
                               .false.,                               &
                               ids, ide, jds, jde, kds, kde,          &
                               ims, ime, jms, jme, kms, kme,          &
                               its, ite, jts, jte, kts, kte          )
 
+   IF ( config_flags%output_dry_theta_fluxes .and. ( config_flags%use_theta_m .EQ. 1 ) .and. &
+        config_flags%output_tsgs_fluxes) THEN
+       !output dry instead of moist theta flux, don't save tendency
+       CALL vertical_diffusion_s( dummy_tend, H3, config_flags, theta-t0, xkhv, &
+                                  dn, dnw, rdz, rdzw, fnm, fnp, rho,     &
+                                  .false.,                               &
+                                  ids, ide, jds, jde, kds, kde,          &
+                                  ims, ime, jms, jme, kms, kme,          &
+                                  its, ite, jts, jte, kts, kte           )
+   END IF
+
+
+    IF (config_flags%output_tsgs_fluxes) THEN
+      DO j=jts,jte
+      DO k=kts+1,kte
+      DO i=its,ite
+        ftz_sgs(i,k,j) = H3(i,k,j)
+      ENDDO
+      ENDDO
+      ENDDO
+    ENDIF
+    ! End changed block.
 
 !*****************************************
 !*****************************************
@@ -4291,10 +4514,24 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
     DO i = i_start, i_end
        cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
        hfx(i,j)=heat_flux*cpm*rho(i,kts,j)         ! provided for output only
+
+       ! Changed Wrflux.
+       IF (config_flags%output_tsgs_fluxes) THEN
+        ftz_sgs(i,kts,j) = heat_flux*rho(i,kts,j)
+       ENDIF
+       ! End changed block.
+
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))*rho(i,kts,j)/dnw(kts) &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
+
+       ! Changed Wrflux.
+         IF ((.not. config_flags%output_dry_theta_fluxes) .and. config_flags%output_tsgs_fluxes) THEN
+            ftz_sgs(i,kts,j) = heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))*rho(i,kts,j) &
+                                               + 1.61*theta(i,kts,j)*qfx(i,j)
+         ENDIF
+       ! End changed block.
        ELSE
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*heat_flux*rho(i,kts,j)/dnw(kts)
@@ -4308,10 +4545,23 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
        cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
        heat_flux = hfx(i,j)/cpm
+
+       ! Changed Wrflux.
+       IF (config_flags%output_tsgs_fluxes) THEN
+        ftz_sgs(i,kts,j) = heat_flux
+       ENDIF
+       ! End changed block.
+
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))/dnw(kts) &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
+         ! Changed Wrflux.
+         IF ((.not. config_flags%output_dry_theta_fluxes) .and. config_flags%output_tsgs_fluxes) THEN
+            ftz_sgs(i,kts,j) = heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV)) &
+                                               + 1.61*theta(i,kts,j)*qfx(i,j)
+         ENDIF
+         ! End changed block.
        ELSE
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*heat_flux/dnw(kts)
@@ -4330,7 +4580,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 !*****************************************
 
    If (km_opt .eq. 2) then
-   CALL vertical_diffusion_s( tke_tendf(ims,kms,jms),               &
+   ! Changed Wrflux.
+   CALL vertical_diffusion_s( tke_tendf(ims,kms,jms), H3,           &
+   ! End changed block.
                               config_flags, tke(ims,kms,jms),       &
                               xkmv,                                 &
                               dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
@@ -4366,8 +4618,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
        END IF
 
-
-          CALL vertical_diffusion_s( moist_tendf(ims,kms,jms,im),         &
+          ! Changed Wrflux.
+          CALL vertical_diffusion_s( moist_tendf(ims,kms,jms,im), H3,     &
+          ! End changed block.
                                      config_flags, var_mix,               &
                                      xkhv,                                &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,   &
@@ -4375,6 +4628,17 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      ids, ide, jds, jde, kds, kde,        &
                                      ims, ime, jms, jme, kms, kme,        &
                                      its, ite, jts, jte, kts, kte        )
+       ! Changed Wrflux.
+       IF ( (im == P_QV) .and. config_flags%output_qsgs_fluxes) THEN
+        DO j=jts,jte
+        DO k = kts+1,kte
+        DO i=its,ite
+          fqz_sgs(i,k,j) = H3(i,k,j)
+        ENDDO
+        ENDDO
+        ENDDO
+      ENDIF
+       ! End changed block.
 
 !*****************************************
 !*****************************************
@@ -4389,6 +4653,11 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
        DO j = j_start, j_end
        DO i = i_start, i_end
           moist_flux = qfx(i,j)
+          ! Changed Wrflux.
+          IF (config_flags%output_qsgs_fluxes) THEN
+            fqz_sgs(i,kts,j) = moist_flux
+          ENDIF
+          ! End changed block.
           moist_tendf(i,kts,j,im)=moist_tendf(i,kts,j,im)  &
                -g*moist_flux/dnw(kts)
        ENDDO
@@ -4410,7 +4679,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
      chem_loop: do im = PARAM_FIRST_SCALAR, n_chem
 
-          CALL vertical_diffusion_s( chem_tendf(ims,kms,jms,im),         &
+          ! Changed Wrflux.
+          CALL vertical_diffusion_s( moist_tendf(ims,kms,jms,im), H3,     &
+          ! End changed block.
                                      config_flags, chem(ims,kms,jms,im), &
                                      xkhv,                               &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,  &
@@ -4426,7 +4697,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
      tracer_loop: do im = PARAM_FIRST_SCALAR, n_tracer
 
-          CALL vertical_diffusion_s( tracer_tendf(ims,kms,jms,im),         &
+          ! Changed Wrflux.
+          CALL vertical_diffusion_s( moist_tendf(ims,kms,jms,im), H3,     &
+          ! End changed block.
                                      config_flags, tracer(ims,kms,jms,im), &
                                      xkhv,                                 &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
@@ -4443,7 +4716,9 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
      scalar_loop: do im = PARAM_FIRST_SCALAR, n_scalar
 
-          CALL vertical_diffusion_s( scalar_tendf(ims,kms,jms,im),         &
+          ! Changed Wrflux.
+          CALL vertical_diffusion_s( moist_tendf(ims,kms,jms,im), H3,     &
+          ! End changed block.
                                      config_flags, scalar(ims,kms,jms,im), &
                                      xkhv,                                 &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
@@ -4786,7 +5061,9 @@ END SUBROUTINE vertical_diffusion_w_2
 !=======================================================================
 !=======================================================================
 
-SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
+! Changed Wrflux.
+SUBROUTINE vertical_diffusion_s( tendency, H3, config_flags, var, xkhv,   &
+! End changed block.
                                  dn, dnw, rdz, rdzw, fnm, fnp, rho,       &
                                  doing_tke,                               &
                                  ids, ide, jds, jde, kds, kde,            &
@@ -4813,6 +5090,10 @@ SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
 
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) ::tendency
 
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(OUT)   ::   H3
+   ! End changed block.
+
    REAL , DIMENSION( ims:ime , kms:kme, jms:jme ) , INTENT(IN) ::   xkhv
 
    REAL , DIMENSION( ims:ime , kms:kme, jms:jme ) ,                       &
@@ -4826,9 +5107,11 @@ SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
 
    INTEGER :: i_start, i_end, j_start, j_end
 
-   REAL , DIMENSION( its:ite, kts:kte, jts:jte)            ::        H3, &
-                                                                 xkxavg, &
+   ! Changed Wrflux.
+   REAL , DIMENSION( its:ite, kts:kte, jts:jte)            ::    xkxavg, &
                                                                   rravg
+   ! End changed block.
+
 
    REAL , DIMENSION( its:ite, kts:kte, jts:jte)            ::  tmptendf
 
@@ -7643,6 +7926,9 @@ END SUBROUTINE phy_bc
                                         chem_tendf, n_chem,                       &
                                         scalar_tendf, n_scalar,                   &
                                         tracer_tendf, n_tracer,                   &
+                                        ! Changed Wrflux.
+                                        ftz_sgs, fqz_sgs, fuz_sgs, fvz_sgs, fwz_sgs,  &
+                                        ! End changed block.
                                         u_2, v_2, w_2, dt,                        &
                                         thp,u_base,v_base,t_base,qv_base,mu,tke,  &
                                         theta, config_flags,                      &
@@ -7699,6 +7985,11 @@ END SUBROUTINE phy_bc
                                                                 tke_tendf,&
                                                                  rt_tendf
  
+   ! Changed Wrflux.
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(OUT) ::    &
+                                       ftz_sgs, fqz_sgs, fuz_sgs, fvz_sgs, fwz_sgs
+   ! End changed block.
+
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme, n_moist),                 &
           INTENT(INOUT) ::                                    moist_tendf
 
@@ -7765,14 +8056,19 @@ END SUBROUTINE phy_bc
    REAL, DIMENSION( its-1:ite+1, jts-1:jte+1 )         :: tao_xz, tao_yz
    REAL, DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1 ):: muavg_u,muavg_v
    REAL, DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1 ):: rdz_u, rdz_v
-   REAL, DIMENSION(kts:kte) :: a, b, c, d
+   ! Changed Wrflux.
+   REAL, DIMENSION(kts:kte) :: a, b, c, d, d_dry
+   ! End changed block.
    REAL, DIMENSION(kts:kte-1) :: a1, b1, c1, d1
  
    INTEGER :: im, i,j,k,ktf,nz
    INTEGER :: i_start, i_end, j_start, j_end
  
    REAL :: V0_u,V0_v,ustar,beta
-   REAL :: heat_flux, moist_flux, qfac
+   ! Changed Wrflux.
+   REAL :: heat_flux, moist_flux,temp,qfac
+   LOGICAL :: output_dry
+   ! End changed block.
    REAL :: cpm,rdz_w,rhoavg_u,rhoavg_v,rdz_z
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -7879,6 +8175,17 @@ END SUBROUTINE phy_bc
             ru_tendf(i,k,j) = ru_tendf(i,k,j) + muavg_u(i,k,j) * (d(k) - u_2(i,k,j))/dt 
          ENDDO
  
+         ! Changed Wrflux.
+         IF (config_flags%output_usgs_fluxes) THEN
+            fuz_sgs(i,kde,j) = 0.
+            DO k=ktf,kts,-1
+               rdz_w = -g/(dnw(k))/muavg_u(i,k,j) !includes rho
+               temp = (d(k) - u_2(i,k,j))/(dt*rdz_w)
+               fuz_sgs(i,k,j) = temp + fuz_sgs(i,k+1,j)
+            ENDDO
+         ENDIF
+         ! End changed block.
+
        ENDDO
        ENDDO
 
@@ -7992,6 +8299,17 @@ END SUBROUTINE phy_bc
             rv_tendf(i,k,j) = rv_tendf(i,k,j) + muavg_v(i,k,j) * (d(k) - v_2(i,k,j))/dt
          ENDDO
  
+         ! Changed Wrflux.
+         IF (config_flags%output_vsgs_fluxes) THEN
+            fvz_sgs(i,kde,j) = 0.
+            DO k=ktf,kts,-1
+               rdz_w = -g/(dnw(k))/muavg_v(i,k,j)!includes rho
+               temp = (d(k) - v_2(i,k,j))/(dt*rdz_w)
+               fvz_sgs(i,k,j) = temp + fvz_sgs(i,k+1,j)
+            ENDDO
+         ENDIF
+         ! End changed block.
+
        ENDDO
        ENDDO
 
@@ -8042,6 +8360,18 @@ END SUBROUTINE phy_bc
           DO k = kts+1,ktf
              rw_tendf(i,k,j) = rw_tendf(i,k,j) + (c1f(k)*mu(i,j) + c2f(k)) * (d1(k-1)-w_2(i,k,j))/dt
           ENDDO
+
+          ! Changed Wrflux.
+          IF (config_flags%output_wsgs_fluxes) THEN
+            fwz_sgs(i,kde,j) = 0.
+            fwz_sgs(i,kde-1,j) = 0.
+            DO k=ktf-1,kts,-1
+               rdz_z = -g/dn(k+1)/(c1f(k+1)*mu(i,j) + c2f(k+1))!includes rho
+               temp = (d1(k) - w_2(i,k+1,j) )/(dt*rdz_z)
+               fwz_sgs(i,k,j) = temp + fwz_sgs(i,k+1,j)
+            ENDDO
+         ENDIF  
+         ! End changed block.
  
        ENDDO
        ENDDO
@@ -8129,6 +8459,14 @@ END SUBROUTINE phy_bc
     CALL wrf_error_fatal( 'isfflx value invalid for diff_opt=2' )
   END SELECT hflux
 
+    ! Changed Wrflux.
+    IF ((config_flags%output_tsgs_fluxes) .and. (config_flags%use_theta_m == 1  ) .and. config_flags%output_dry_theta_fluxes) THEN
+      output_dry = .true.
+    ELSE
+      output_dry = .false.
+    ENDIF
+    ! End changed block.
+
     DO  j = j_start, j_end
     DO  i = i_start, i_end
             cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
@@ -8147,6 +8485,13 @@ END SUBROUTINE phy_bc
              d(k) = var_mix(i,kts,j)                    &
                   - dt*rdz_w*nlflux_rho(i,k+1,j)*qfac   &
                   + dt*rdz_w*(qfac*hfx(i,j)/cpm+1.61*theta(i,kts,j)*qfx(i,j))
+             ! Changed Wrflux.
+             IF (output_dry) THEN
+                  d_dry(k) = theta(i,kts,j)                   &
+                           - dt*rdz_w*nlflux_rho(i,k+1,j)      &
+                           + dt*rdz_w*hfx(i,j)/cpm
+             ENDIF
+             ! End changed block.
           ENDIF
  
           IF(config_flags%use_theta_m == 1)THEN
@@ -8160,12 +8505,23 @@ END SUBROUTINE phy_bc
             b(k)  = 1.+rdz_w*(rdz(i,k+1,j)*xkxavg(i,k+1,j)+rdz(i,k,j)*xkxavg(i,k,j))*dt
             c(k)  = -rdz_w*rdz(i,k+1,j)*xkxavg(i,k+1,j)*dt
             d(k)  = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*qfac*dt + var_mix(i,k,j)
+            ! Changed Wrflux.
+            IF (output_dry) THEN
+              d_dry(k) = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*dt + theta(i,k,j)
+            ENDIF
+            ! End changed block.
           ENDDO
  
             a(ktf) = 0.
             b(ktf) = 1.
             c(ktf) = 0.
             d(ktf) = var_mix(i,ktf,j)
+            ! Changed Wrflux.
+            IF (output_dry) THEN
+              d_dry(k) = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*dt + theta(i,k,j)
+            ENDIF
+            ! End changed block.
+
  
           CALL tridiag(nz,a,b,c,d)
  
@@ -8173,6 +8529,26 @@ END SUBROUTINE phy_bc
              rt_tendf(i,k,j) = rt_tendf(i,k,j) + (c1h(k)*mu(i,j) + c2h(k)) * (d(k) - var_mix(i,k,j))/dt
           ENDDO
  
+          ! Changed Wrflux.
+          IF (config_flags%output_tsgs_fluxes) THEN
+            IF (output_dry) THEN
+               CALL tridiag(nz,a,b,c,d_dry)
+               d(:) = d_dry(:)
+            ENDIF
+            ftz_sgs(i,kde,j) = 0.
+            DO k=ktf,kts,-1
+                  !reconstruct flux from tendency
+                  rdz_w = -g/dnw(k)/(c1h(k)*mu(i,j) + c2h(k))!includes rho
+                  IF (output_dry) THEN
+                    temp = d(k) - theta(i,k,j)
+                  ELSE
+                    temp = d(k) - var_mix(i,k,j)
+                  ENDIF
+                  temp = temp/(dt*rdz_w)
+                  ftz_sgs(i,k,j) = temp + ftz_sgs(i,k+1,j)
+            ENDDO
+         ENDIF
+         ! End changed block.
        ENDDO
        ENDDO
 
@@ -8302,6 +8678,18 @@ END SUBROUTINE phy_bc
            DO k = kts, ktf
              moist_tendf(i,k,j,im) = moist_tendf(i,k,j,im) + (c1h(k)*mu(i,j)+c2h(k)) * (d(k)-var_mix(i,k,j))/dt
            ENDDO
+
+           ! Changed Wrflux.
+           IF (config_flags%output_qsgs_fluxes) THEN
+           fqz_sgs(i,kde,j) = 0.
+           DO k=ktf,kts,-1
+               !reconstruct flux from tendency
+               rdz_w = -g/dnw(k)/(c1h(k)*mu(i,j)+c2h(k))!includes rho
+               temp = (d(k) - var_mix(i,k,j))/(dt*rdz_w)
+               fqz_sgs(i,k,j) = temp + fqz_sgs(i,k+1,j)
+           ENDDO
+           ENDIF
+           ! End changed block.
 
          ENDDO
          ENDDO

@@ -351,7 +351,10 @@
     CALL wrf_put_dom_ti_char ( fid , 'START_DATE', TRIM(start_date) , ierr )
     IF ( switch .EQ. input_only) THEN
        CALL wrf_put_dom_ti_char ( fid , 'SIMULATION_START_DATE', TRIM(start_date) , ierr )
-    ELSE IF ( ( switch .EQ. restart_only ) .OR. ( switch .EQ. history_only ) ) THEN
+    ! Changed Wrflux.
+    ! ELSE IF ( ( switch .EQ. restart_only ) .OR. ( switch .EQ. history_only ) ) THEN
+    ELSE
+    ! End changed block.
        CALL nl_get_simulation_start_year   ( 1, simulation_start_year   )
        CALL nl_get_simulation_start_month  ( 1, simulation_start_month  )
        CALL nl_get_simulation_start_day    ( 1, simulation_start_day    )
@@ -1029,6 +1032,19 @@ endif
       CALL wrf_put_dom_ti_integer ( fid , 'PRODUCTION_STATUS' , config_flags%production_status , 1 , ierr )
       CALL wrf_put_dom_ti_integer ( fid , 'COMPRESSION' , config_flags%compression , 1 , ierr )
     ENDIF
+
+! Changed Wrflux.
+CALL wrf_put_dom_ti_logical ( fid , 'PERIODIC_X' , config_flags%periodic_x , 1 , ierr )
+CALL wrf_put_dom_ti_logical ( fid , 'PERIODIC_Y' , config_flags%periodic_y , 1 , ierr )
+
+IF (config_flags%output_avgfluxes) THEN
+    CALL wrf_put_dom_ti_logical ( fid , 'HESSELBERG_AVG' , config_flags%hesselberg_avg , 1 , ierr )
+    CALL wrf_put_dom_ti_real ( fid , 'AVG_INTERVAL' , config_flags%avg_interval , 1 , ierr )
+    IF (config_flags%output_t_fluxes .gt. 0) THEN
+        CALL wrf_put_dom_ti_logical ( fid , 'OUTPUT_DRY_THETA_FLUXES' , config_flags%output_dry_theta_fluxes , 1 , ierr )
+    ENDIF
+ENDIF
+! End changed block.
 
 #if ( (EM_CORE == 1) && (DA_CORE != 1) )
       save_topo_orig = grid%save_topo_from_real
