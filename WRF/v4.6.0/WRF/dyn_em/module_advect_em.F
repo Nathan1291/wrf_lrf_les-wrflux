@@ -3339,13 +3339,6 @@ SUBROUTINE advect_v   ( v, v_old, tendency,            &
       ENDDO
       ENDDO
 
-      DO k=kts,ktf
-      DO i = i_start, i_end
-            ! We are calculating vertical fluxes on v points,
-            ! so we must mean msf_v_x/y variables
-            tendency(i,k,j)=tendency(i,k,j)-(msfvy(i,j)/msfvx(i,j))*rdzw(k)*(vflux(i,k+1)-vflux(i,k)) ! ADT eqn 45, 3rd term on RHS
-      ENDDO
-
       ! Changed Wrflux.
       IF (output_fluxes) THEN
         DO k = kts,kte
@@ -3355,6 +3348,13 @@ SUBROUTINE advect_v   ( v, v_old, tendency,            &
         ENDDO
       ENDIF
       ! End changed block.
+
+      DO k=kts,ktf
+      DO i = i_start, i_end
+            ! We are calculating vertical fluxes on v points,
+            ! so we must mean msf_v_x/y variables
+            tendency(i,k,j)=tendency(i,k,j)-(msfvy(i,j)/msfvx(i,j))*rdzw(k)*(vflux(i,k+1)-vflux(i,k)) ! ADT eqn 45, 3rd term on RHS
+      ENDDO
       ENDDO
    ENDDO
 
@@ -6827,6 +6827,9 @@ SUBROUTINE advect_scalar_pd   ( field, field_old, tendency,    &
                                                                   rdy,  &
                                                                   dt
    INTEGER ,                                     INTENT(IN   ) :: time_step
+   ! Changed Wrflux.
+   LOGICAL ,                                     INTENT(IN   ) :: output_fluxes
+   ! End changed block.
 
    ! Local data
    

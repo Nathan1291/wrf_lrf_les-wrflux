@@ -197,7 +197,7 @@ state    real   ww_m           ikj     dyn_em      1         Z      r         "w
 i1       real   wwp            ikj     dyn_em      1         Z                                          
 i1       real   rw_tend        ikj     dyn_em      1         Z                                          
 i1       real   rw_tendf       ikj     dyn_em      1         Z                   
-# Changed Wrflux
+# Changed Wrflux.
 state    real   w_save         ikj     dyn_em      1         Z      -         "W_SAVE"
 # End changed block.
 state    real   w_subs         |       dyn_em      1         -      i3rh      "W_SUBS" "large-scale vertical velocity" "m s-1"
@@ -300,7 +300,7 @@ state    real   mub_fine        ij     dyn_em      1         -      -           
 state    real   mub_save        ij     dyn_em      1         -      -           "mub_save" "nest temp, holds orig fine grid mub" "Pa"
 state    real   mu0             ij     dyn_em      1         -      i1          "mu0" "initial dry mass in column" "Pa"
 state    real   mudf            ij     dyn_em      1         -      -           "mudf" "" ""
-# Changed for Wrflux
+# Changed Wrflux.
 state    real   mudf_x          ij     dyn_em      1          X     -           "mudf_x" "" ""
 state    real   mudf_y          ij     dyn_em      1          Y     -           "mudf_y" "" ""
 # End Changed Block.
@@ -428,7 +428,7 @@ state   real    power          ij       misc      1         -     irh       "Pow
 
 # State for derived time quantities.  
 state   integer itimestep      -        -          -         -     rh         "itimestep"             ""         ""      
-# Changed Wrflux
+# Changed Wrflux.
 state   real    xtime          -        -          -         -     rh0{24}    "xtime"                 "minutes since YYYY-MM-DD hh:mm:ss"      "minutes since simulation start"
 # End changed block.
 state   real    julian         -        -          -         -     -          "julian"                "day of year, 0.0 at 0Z on 1 Jan."         "days"      

@@ -1015,7 +1015,7 @@ SUBROUTINE advance_mu_t( ww, ww_1, u, u_1, v, v_1,            &
                          uam, vam, wwam, t, t_1,              &
                          ! Changed Wrflux.
                          t_ave, th_save, ft, mu_tend,         &
-                         # End changed block.
+                         ! End changed block.
                          rdx, rdy, dts, epssm,                &
                          dnw, fnm, fnp, rdnw,                 &
                          msfux, msfuy, msfvx, msfvx_inv,      &
@@ -1023,7 +1023,7 @@ SUBROUTINE advance_mu_t( ww, ww_1, u, u_1, v, v_1,            &
                          ! Changed Wrflux.
                          step, config_flags, rk_step,         &
                          ftx_small, fty_small, ftz_small,     &
-                         # End changed block.
+                         ! End changed block.
                          ids, ide, jds, jde, kds, kde,        &
                          ims, ime, jms, jme, kms, kme,        &
                          its, ite, jts, jte, kts, kte        )

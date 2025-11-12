@@ -3909,8 +3909,10 @@ SUBROUTINE horizontal_diffusion_s (tendency, H1, H2, config_flags, var,   &
 
    REAL , DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1)    ::     H1avg, &
                                                                   H2avg, &
-                                                                     H1, &
-                                                                     H2, &
+                                                                     ! Changed Wrflux (Removed).
+                                                                     ! H1, &
+                                                                     ! H2, &
+                                                                     ! End Changed Block.
                                                                  xkxavg, &
                                                                 zx_at_m, &
                                                                 zy_at_m
