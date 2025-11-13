@@ -928,8 +928,8 @@ BENCH_START(rk_tend_tim)
                          ,grid%fux_adv, grid%fuy_adv, grid%fuz_adv, grid%fuz_imp                               &
                          ,grid%fvx_adv, grid%fvy_adv, grid%fvz_adv, grid%fvz_imp                               &
                          ,grid%fwx_adv, grid%fwy_adv, grid%fwz_adv, grid%fwz_imp, moist(:,:,:,P_QV)            &
+                         ,mu_tend, grid%u_save, grid%v_save, grid%w_save, ph_save                              &
                          ! End changed block.
-                         ,mu_tend, grid%u_save, grid%v_save, w_save, ph_save                                   &
                          ,grid%t_save, mu_save, grid%rthften                                                   &
                          ,grid%ru, grid%rv, grid%rw, grid%ww, wwE, wwI                                         &
                          ,grid%u_2, grid%v_2, grid%w_2, grid%t_2, grid%ph_2                                    &

@@ -310,6 +310,10 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                                       w_tend_damp
                                                          ! End changed block.
 
+   ! Changed Wrflux.
+   REAL, DIMENSION( ims:ime, kms:kme , jms:jme ), INTENT(OUT) :: dph_x, dph_y
+   ! End changed block.
+
    REAL , DIMENSION( ims:ime , jms:jme ) ,         INTENT(  OUT) :: mu_tend, &
                                                                     mu_save
 
@@ -889,6 +893,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
        CALL advect_w_implicit ( w, w_old, rw_tend, fwz_imp,     &
                                 output_fluxes,                  &
       ! End changed block.
+                                ru_tend, rv_tend, ht, wwI,      &
                                 ph, ph_old, ph_tend,            &
                                 c1f, c2f, cf1, cf2, cf3,        &
                                 mut_old, mut, mut_new,          &

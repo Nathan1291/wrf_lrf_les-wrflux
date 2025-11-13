@@ -1097,8 +1097,8 @@ BENCH_START(vert_diff_tim)
                                       scalar_tend, num_scalar,                     &
                                       tracer_tend, num_tracer,                     &
                                       ! Changed Wrflux.
-                                      grid%ftx_sgs, grid%fty_sgs, grid%fqx_sgs, grid%fqy_sgs,             &
-                                      grid%fux_sgs, grid%fvx_sgs, grid%fvy_sgs, grid%fwx_sgs, grid%fwy_sgs,  &
+                                      grid%ftz_sgs, grid%fqz_sgs,                                 &
+                                      grid%fuz_sgs, grid%fvz_sgs, grid%fwz_sgs,                     &
                                       ! End changed block.
                                       grid%u_2, grid%v_2,                                  &
                                       grid%t_2,grid%u_base,grid%v_base,grid%t_base,grid%qv_base,          &
