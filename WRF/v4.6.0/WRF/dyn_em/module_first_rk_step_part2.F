@@ -61,7 +61,9 @@ CONTAINS
     USE module_fddaobs_driver, ONLY : fddaobs_driver
     USE module_bc, ONLY : set_physical_bc3d, set_physical_bc2d
     USE module_physics_addtendc, ONLY : update_phy_ten
+    ! Changed Wrflux.
     USE module_pbl_driver, ONLY : fluxes_from_bl_tend
+    ! End changed block.
 
     USE module_sfs_driver !JDM
     USE module_stoch, ONLY : update_stoch_ten, perturb_physics_tend, RAND_PERT_UPDATE, contiguize_2d

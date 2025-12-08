@@ -3206,7 +3206,7 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
       tracer_loop: do ic = PARAM_FIRST_SCALAR, n_tracer
 
         ! Changed Wrflux.
-        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic), H1, H2, &
+        CALL horizontal_diffusion_s( tracer_tendf(ims,kms,jms,ic), H1, H2, &
         ! End changed block.
                                      config_flags,                     &
                                      tracer(ims,kms,jms,ic),           &
@@ -3227,7 +3227,7 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
       scalar_loop: do is = PARAM_FIRST_SCALAR, n_scalar
 
         ! Changed Wrflux.
-        CALL horizontal_diffusion_s( chem_tendf(ims,kms,jms,ic), H1, H2, &
+        CALL horizontal_diffusion_s( scalar_tendf(ims,kms,jms,is), H1, H2, &
         ! End changed block.
                                      config_flags,                     &
                                      scalar(ims,kms,jms,is),           &
@@ -8520,7 +8520,7 @@ END SUBROUTINE phy_bc
             d(ktf) = var_mix(i,ktf,j)
             ! Changed Wrflux.
             IF (output_dry) THEN
-              d_dry(k) = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*dt + theta(i,k,j)
+              d_dry(ktf) = theta(i,ktf,j)
             ENDIF
             ! End changed block.
 

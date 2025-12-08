@@ -40,6 +40,15 @@
             mp_physics, ra_lw_physics, ra_sw_physics, sf_sfclay_physics, &
             sf_surface_physics, bl_pbl_physics, cu_physics, hypsometric_opt, sf_lake_physics, &
             use_theta_m, use_maxw_level, use_trop_level,hybrid_opt, gwd_opt
+
+    # Removed Wrflux.
+      #if ( WRF_CMAQ == 1 )
+      #INTEGER wrf_cmaq_option
+      #LOGICAL direct_sw_feedback
+      #endif
+    # End changed block.
+    
+    
     INTEGER swint_opt, aer_type,aer_aod550_opt,aer_angexp_opt,aer_ssa_opt,aer_asy_opt, aer_opt
     REAL    aer_aod550_val,aer_angexp_val,aer_ssa_val,aer_asy_val,etac
     REAL    khdif, kvdif, swrad_scat, dampcoef,radt,bldt,cudt

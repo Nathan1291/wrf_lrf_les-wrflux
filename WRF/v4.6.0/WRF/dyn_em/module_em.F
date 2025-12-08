@@ -596,7 +596,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               its, ite, jts, jte, kts, kte )
    ENDIF
 
-   ! Changed Wrflux
+   ! Changed Wrflux.
    IF ((rk_step == rk_order) .and. config_flags%output_vres_fluxes) THEN
       output_fluxes = .true.
    ELSE
@@ -620,7 +620,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
       ! End changed block.
 
    ELSE
-      ! Changed Wrflux
+      ! Changed Wrflux.
       CALL advect_v ( v, v , rv_tend,              &
                      fvx, fvy, fvz, output_fluxes, &
                      ru, rv, wwE,                  &
@@ -771,6 +771,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                ims, ime, jms, jme, kms, kme,  &
                                its, ite, jts, jte, kts, kte  )
    ELSE
+     ! Changed Wrflux.
      IF (advect_thdry) THEN
         CALL advect_scalar ( th_save, th_save, t_tend_dummy, &
                              ftx, fty, ftz, .true.,        &
@@ -788,6 +789,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
 
      CALL advect_scalar ( t, t, t_tend, ftx, fty, ftz,  &
                           output_fluxes_s, ru, rv, wwE, &
+     ! End changed block.
                           c1h, c2h,                     &
                           mut, time_step, config_flags, &
                           msfux, msfuy, msfvx, msfvy,   &
@@ -1651,9 +1653,7 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                       time_step, config_flags, tenddec,   &
                                       msfux, msfuy, msfvx, msfvy,         &
                                       msftx, msfty, fnm, fnp,             &
-                                      ! Changed Wrflux.
                                       rdx, rdy, rdnw, dt_step,            &
-                                      ! End changed block.
                                       ids, ide, jds, jde, kds, kde,       &
                                       ims, ime, jms, jme, kms, kme,       &
                                       its, ite, jts, jte, kts, kte     )
@@ -1673,9 +1673,7 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                         config_flags, tenddec,              &
                                         msfux, msfuy, msfvx, msfvy,         &
                                         msftx, msfty, fnm, fnp,             &
-                                        ! Changed Wrflux.
                                         rdx, rdy, rdnw, dt_step,            &
-                                        ! End changed block.
                                         ids, ide, jds, jde, kds, kde,       &
                                         ims, ime, jms, jme, kms, kme,       &
                                         its, ite, jts, jte, kts, kte     )

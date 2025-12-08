@@ -2132,6 +2132,7 @@ END SUBROUTINE restore_ph_mu
 !----------------------------------------------------------------------
 #endif
 
+! Added Wrflux.
 SUBROUTINE recover_small_step_tendencies( u_tend_pg, v_tend_pg, w_tend_pg, &
                                           u_tend_damp, v_tend_damp,        &
                                           u_1, u_2, v_1, v_2, w_1, w_2,    &
