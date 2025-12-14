@@ -1361,7 +1361,6 @@ BENCH_START(advance_mu_t_tim)
                           grid%msfux,grid%msfuy, grid%msfvx, grid%msfvx_inv,            &
                           grid%msfvy, grid%msftx,grid%msfty,                            &
                           ! Changed Wrflux.
-                          ! iteration, config_flags,                                      &
                           iteration, config_flags, rk_step,                             &
                           ! End changed block.
                           ids, ide, jds, jde, kds, kde,      &

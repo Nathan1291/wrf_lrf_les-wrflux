@@ -5,7 +5,6 @@ MODULE module_avgflx_em
   USE module_bc
   USE module_model_constants
   USE module_wrf_error
-  USE module_state_description
 
 CONTAINS
 
@@ -16,6 +15,7 @@ CONTAINS
        & ids, ide, jds, jde, kds, kde,           &
        & ims, ime, jms, jme, kms, kme,           &
        & its, ite, jts, jte, kts, kte,           &
+       ! Changed Wrflux.
        & avgflx_cfu1,avgflx_cfd1,avgflx_dfu1,avgflx_efu1,avgflx_dfd1,avgflx_efd1, &
        & config_flags,                                                                                &
        & t_mean,tx_mean,ty_mean,tz_mean,tt_mean,ftx_adv_mean,fty_adv_mean,ftz_adv_mean,               &
@@ -40,22 +40,25 @@ CONTAINS
        & w_tend_pg_mean,w_tend_cor_curv_mean,                                                         &
        & t_tend_damp_mean,q_tend_damp_mean,u_tend_damp_mean,v_tend_damp_mean,w_tend_damp_mean,        &
        & rhod_mean,mut_mean,z_mean,dph_x_mean,dph_y_mean                                              )
+       ! End changed block.
 
     IMPLICIT NONE
 
-    INTEGER , INTENT(IN)        ::      &
-         ids, ide, jds, jde, kds, kde,  &
+    INTEGER , INTENT(IN)        :: ids, ide, jds, jde, kds, kde,  &
          ims, ime, jms, jme, kms, kme,  &
          its, ite, jts, jte, kts, kte
 
     REAL,     DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(INOUT) ::    &
          avgflx_rum,avgflx_rvm,avgflx_wwm
 
+    ! Changed Wrflux.
     REAL,     DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(INOUT) ::    &
+    ! End changed block.
          avgflx_cfu1,avgflx_cfd1,avgflx_dfu1,avgflx_efu1,avgflx_dfd1,avgflx_efd1
 
     TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
 
+    ! Changed Wrflux.
     REAL,  DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(OUT) ::                       &
        t_mean,tx_mean,ty_mean,tz_mean,tt_mean,ftx_adv_mean,fty_adv_mean,ftz_adv_mean,               &
        q_mean,qx_mean,qy_mean,qz_mean,qq_mean,fqx_adv_mean,fqy_adv_mean,fqz_adv_mean,               &
@@ -81,10 +84,13 @@ CONTAINS
        rhod_mean,z_mean,dph_x_mean,dph_y_mean
 
     REAL, DIMENSION( ims:ime , jms:jme ) , INTENT(OUT) :: mut_mean
+    ! End changed block.
 
     INTEGER :: i,j,k
 
+    ! Changed Wrflux.
     if (config_flags%do_avgflx_em .eq. 1) then
+    ! End changed block.
     DO j=jts,jte
        DO k=kts,kte
           DO i=its,ite
@@ -96,7 +102,9 @@ CONTAINS
     end DO
     endif
 
+    ! Changed Wrflux.
     if (config_flags%do_avgflx_cugd .EQ. 1) then
+    ! End changed block.
        DO j=jts,jte
           DO k=kts,kte
              DO i=its,ite
@@ -111,6 +119,7 @@ CONTAINS
        end DO
     end if
 
+    ! Changed Wrflux.
     if (config_flags%output_avgfluxes) then
       DO j=jts,jte
       DO i=its,ite
@@ -260,17 +269,19 @@ CONTAINS
       end DO
       end DO
     endif
+    ! End changed block.
 
     return
   end subroutine zero_avgflx
 
+  ! Changed Wrflux.
   subroutine upd_avgflx(avgflx_count, do_avg, avgflx_rum,avgflx_rvm,avgflx_wwm, &
        &   ru_m, rv_m, ww_m, &
        & ids, ide, jds, jde, kds, kde,           &
        & ims, ime, jms, jme, kms, kme,           &
        & its, ite, jts, jte, kts, kte, do_cu,    &
        & cfu1,cfd1,dfu1,efu1,dfd1,efd1,          &
-       & avgflx_cfu1,avgflx_cfd1,avgflx_dfu1,avgflx_efu1,avgflx_dfd1,avgflx_efd1,   &
+& avgflx_cfu1,avgflx_cfd1,avgflx_dfu1,avgflx_efu1,avgflx_dfd1,avgflx_efd1,   &
        & config_flags,                                                              &
        & T_MEAN,TX_MEAN,TY_MEAN,TZ_MEAN,TT_MEAN,FTX_ADV_MEAN,FTY_ADV_MEAN,FTZ_ADV_MEAN,              &
        & Q_MEAN,QX_MEAN,QY_MEAN,QZ_MEAN,QQ_MEAN,FQX_ADV_MEAN,FQY_ADV_MEAN,FQZ_ADV_MEAN,              &
@@ -313,11 +324,10 @@ CONTAINS
        & fnm, fnp, mut, c1h, c2h, c1f, c2f, cf1, cf2, cf3, cfn, cfn1,                            &
        & msfuy, msfvx, msfvy, msftx, msfty,                                                      &
        & last_timestep, dt                                                                       )
-
+  ! End changed block.
     IMPLICIT NONE
 
-    INTEGER , INTENT(IN)        ::      &
-         ids, ide, jds, jde, kds, kde,  &
+    INTEGER , INTENT(IN)        :: ids, ide, jds, jde, kds, kde,  &
          ims, ime, jms, jme, kms, kme,  &
          its, ite, jts, jte, kts, kte
 
@@ -330,11 +340,11 @@ CONTAINS
     REAL,     DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(INOUT) ::    &
          avgflx_rum,avgflx_rvm,avgflx_wwm
 
+    ! Changed Wrflux.
     REAL,     DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(IN) ::    &
          cfu1,cfd1,dfu1,efu1,dfd1,efd1
     REAL,     DIMENSION( ims:ime , kms:kme , jms:jme ) , INTENT(INOUT) ::    &
          avgflx_cfu1,avgflx_cfd1,avgflx_dfu1,avgflx_efu1,avgflx_dfd1,avgflx_efd1
-
 
     TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
     LOGICAL, INTENT(IN) :: do_avg
@@ -406,8 +416,11 @@ CONTAINS
                                                                     ftx_total, fty_total, ftz_total,            &
                                                                     fqz_total, fuz_total, fvz_total, fwz_total, &
                                                                     qfac, u8w, v8w, rho8w
+    ! End changed block.
 
     INTEGER :: i,j,k
+     
+    ! Changed Wrflux.
     REAL :: local_count, count_p1, fz, rhom, rhox, rhoy, rhoz, rhoxy, rhoxz, rhoyz,        &
             rho_mean, rhox_mean, rhoy_mean, rhoz_mean, rhoxy_mean, rhoxz_mean, rhoyz_mean, &
             rho_mean_flx, rhox_mean_flx, rhoy_mean_flx, rhoz_mean_flx, rhoxy_mean_flx,     &
@@ -427,9 +440,10 @@ CONTAINS
             vx2, vy2, vz2,                             &
             wx2, wy2, wz2,                             &
             rw_diag_s
-
+    ! End changed block.
 
     local_count = real(avgflx_count)
+    ! Changed Wrflux.
     count_p1 = local_count + 1.
 
     if (config_flags%output_avgfluxes) then
@@ -598,7 +612,7 @@ CONTAINS
         ENDDO
         ENDDO
         ENDDO
-      
+
         rhom = 1.
         rhox = 1.
         rhoy = 1.
@@ -715,7 +729,7 @@ CONTAINS
                 T_MEAN(i,k,j) = (local_count*T_MEAN(i,k,j) + th_save(i,k,j)*rhom )/count_p1/rho_mean
                 TX_MEAN(i,k,j) = (local_count*TX_MEAN(i,k,j) + thetax*rhox )/count_p1/rhox_mean
                 TY_MEAN(i,k,j) = (local_count*TY_MEAN(i,k,j) + thetay*rhoy )/count_p1/rhoy_mean
-                TT_MEAN(i,k,j) = (local_count*TT_MEAN(i,k,j) + (th_save(i,k,j) - t0)**2 )/count_p1
+                TT_MEAN(i,k,j) = (local_count*TT_MEAN(i,k,j) + th_save(i,k,j)**2 )/count_p1
                 FTX_ADV_MEAN(i,k,j)  = (local_count*FTX_ADV_MEAN(i,k,j) + ftx_total(i,k,j) )/count_p1*fqx_dfac
                 FTY_ADV_MEAN(i,k,j)  = (local_count*FTY_ADV_MEAN(i,k,j) + fty_total(i,k,j) )/count_p1*fqy_dfac
               ENDIF
@@ -1151,6 +1165,7 @@ CONTAINS
     endif
 
     if (config_flags%do_avgflx_em .eq. 1) then
+    ! End changed block.
     DO j=jts,jte
        DO k=kts,kte
           DO i=its,ite
@@ -1162,7 +1177,9 @@ CONTAINS
     end DO
     endif
 
+    ! Changed Wrflux.
     if (do_cu) then
+    ! End changed block.
        DO j=jts,jte
           DO k=kts,kte
              DO i=its,ite
@@ -1186,6 +1203,7 @@ CONTAINS
     return
   end subroutine upd_avgflx
 
+! Added Wrflux.
   subroutine stagger_z(var_stag, var,                      &
                        cf1, cf2, cf3, cfn, cfn1, fnm, fnp, &
                        k, kms, kme, kde                    )
@@ -1264,5 +1282,5 @@ CONTAINS
     endif
 
   end subroutine get_staggered_from_fluxes
-
+! End changed block.
 end MODULE module_avgflx_em

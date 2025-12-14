@@ -361,7 +361,6 @@
     IF ( switch .EQ. input_only) THEN
        CALL wrf_put_dom_ti_char ( fid , 'SIMULATION_START_DATE', TRIM(start_date) , ierr )
     ! Changed Wrflux.
-    ! ELSE IF ( ( switch .EQ. restart_only ) .OR. ( switch .EQ. history_only ) ) THEN
     ELSE
     ! End changed block.
        CALL nl_get_simulation_start_year   ( 1, simulation_start_year   )

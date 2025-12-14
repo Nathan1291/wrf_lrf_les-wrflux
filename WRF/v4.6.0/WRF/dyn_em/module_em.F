@@ -201,7 +201,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                          fvx, fvy, fvz, fvz_imp,                          &
                          fwx, fwy, fwz, fwz_imp,                          &
                          qv,                                              &
-                         !# End changed block.
+                         ! End changed block.
                          mu_tend, u_save, v_save, w_save, ph_save,        &
                          t_save, mu_save, RTHFTEN,                        &
                          ru, rv, rw, ww, wwE, wwI,                        &
@@ -609,6 +609,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
       CALL advect_weno_v ( v, v , rv_tend,               &
                            fvx, fvy, fvz, output_fluxes, &
                            ru, rv, wwE,                  &
+      ! End changed block.
                            c1h, c2h,                     &
                            mut, time_step, config_flags, &
                            msfux, msfuy, msfvx, msfvy,   &
@@ -617,13 +618,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                            ids, ide, jds, jde, kds, kde, &
                            ims, ime, jms, jme, kms, kme, &
                            its, ite, jts, jte, kts, kte )
-      ! End changed block.
 
    ELSE
       ! Changed Wrflux.
       CALL advect_v ( v, v , rv_tend,              &
                      fvx, fvy, fvz, output_fluxes, &
                      ru, rv, wwE,                  &
+      ! End changed block.
                      c1h, c2h,                     &
                      mut, time_step, config_flags, &
                      msfux, msfuy, msfvx, msfvy,   &
@@ -632,13 +633,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                      ids, ide, jds, jde, kds, kde, &
                      ims, ime, jms, jme, kms, kme, &
                      its, ite, jts, jte, kts, kte )
-      ! End changed block.
    ENDIF
 
    IF( ieva ) THEN
       ! Changed Wrflux
      CALL advect_v_implicit ( v, v_old, rv_tend, fvz_imp,      &
                               output_fluxes, ru, rv, wwI,      &
+      ! End changed block.
                               c1h, c2h,                        &
                               muv_old, muv, muv_new,           &
                               config_flags,                    &
@@ -650,7 +651,6 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                               ids, ide, jds, jde, kds, kde,    &
                               ims, ime, jms, jme, kms, kme,    &
                               its, ite, jts, jte, kts, kte )
-      ! End changed block.
    ENDIF
 
    IF (non_hydrostatic) THEN
@@ -667,6 +667,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
        CALL advect_weno_w ( w, w, rw_tend,                &
                             fwx, fwy, fwz, output_fluxes, &
                             ru, rv, wwE,                  &
+     ! End changed block.
                             c1h, c2h,                     &
                             mut, time_step, config_flags, &
                             msfux, msfuy, msfvx, msfvy,   &
@@ -675,13 +676,13 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                             ids, ide, jds, jde, kds, kde, &
                             ims, ime, jms, jme, kms, kme, &
                             its, ite, jts, jte, kts, kte )
-     ! End changed block.
 
      ELSE
      ! Changed Wrflux
        CALL advect_w ( w, w, rw_tend,                &
                        fwx, fwy, fwz, output_fluxes, &
                        ru, rv, wwE,                  &
+     ! End changed block.
                        c1h, c2h,                     &
                        mut, time_step, config_flags, &
                        msfux, msfuy, msfvx, msfvy,   &
@@ -691,7 +692,6 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                        ims, ime, jms, jme, kms, kme, &
                        its, ite, jts, jte, kts, kte )
      ENDIF
-     ! End changed block.
    ENDIF  ! non-hydrostatic
 
 !  theta flux divergence
@@ -798,7 +798,6 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                           ids, ide, jds, jde, kds, kde, &
                           ims, ime, jms, jme, kms, kme, &
                           its, ite, jts, jte, kts, kte )
-     # End changed block.
 
    ENDIF
 
@@ -1446,10 +1445,8 @@ END SUBROUTINE rk_addtend_dry
 SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                             tenddec,                         &
                             rk_step, dt_step,                &
-                            ! Changed Wrflux.
                             ru, rv, ww, wwE, wwI,            &  
                             u_old, v_old,                    &
-                            ! End changed block.  
                             mut, mub, mu_old,                &
                             c1h, c2h, c1f, c2f, alt,         &
                             scalar_old, scalar,              &

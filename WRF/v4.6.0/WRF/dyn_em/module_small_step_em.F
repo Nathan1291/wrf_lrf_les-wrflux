@@ -2213,5 +2213,6 @@ SUBROUTINE recover_small_step_tendencies( u_tend_pg, v_tend_pg, w_tend_pg, &
         ENDDO
       ENDIF
 END SUBROUTINE recover_small_step_tendencies
+! End Changed Block.
 
 END MODULE module_small_step_em

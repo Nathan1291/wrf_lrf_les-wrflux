@@ -3388,7 +3388,9 @@ BENCH_END(g_bc_end_tim)
               &   grid%avgflx_efu1,grid%avgflx_dfd1,grid%avgflx_efd1, &
               ! Changed Wrflux.
               &   config_flags )
-              ! End changed block.         CALL wrf_debug(200,'In solve_em_tl, after upd_avgflx call')
+              ! End changed block.         
+      
+         CALL wrf_debug(200,'In solve_em_tl, after upd_avgflx call')
 
       ENDDO
       grid%avgflx_count = grid%avgflx_count + 1

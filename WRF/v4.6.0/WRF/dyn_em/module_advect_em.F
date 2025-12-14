@@ -787,8 +787,9 @@ SUBROUTINE advect_u   ( u, u_old, tendency,            &
       ! Changed Wrflux.
       IF (output_fluxes) THEN
         DO k=kts,ktf
-        DO i=i_start,i_end
-          fqy_out(i,k,j) = fqy(i,k,jp1)
+        DO i = i_start-1, i_end
+          !shift x-flux to be on mass points
+          fqx_out(i,k,j) = fqx(i+1,k)
         ENDDO
         ENDDO
       ENDIF
@@ -5759,6 +5760,15 @@ ELSE IF ( horz_order == 4 ) THEN
                0.5*((2.-fzm(k-1))*ru(i_end+1,k-1,j)-fzp(k-1)*ru(i_end+1,k-2,j))  &
                    *(w(i_end+1,k,j)+w(i_end,k,j))
         ENDIF
+      # Changed Wrflux.
+      IF (output_fluxes) THEN
+        DO k = kts+1,kde
+        DO i = i_start, i_end+1
+          fqx_out(i,k,j) = fqx(i,k)
+        ENDDO
+        ENDDO
+      ENDIF
+      # End changed block.
 
 !  x flux-divergence into tendency
 
@@ -8598,6 +8608,18 @@ SUBROUTINE advect_scalar_pd   ( field, field_old, tendency,    &
   ENDDO
   ENDDO
   ENDDO
+
+  # Changed Wrflux.
+  IF (output_fluxes) THEN
+    DO j = j_start, j_end+1
+    DO k=kts,ktf
+    DO i = i_start, i_end
+      fqy_out(i,k,j) = fqy(i,k,j) + fqyl(i,k,j)
+    ENDDO
+    ENDDO
+    ENDDO
+  ENDIF
+  # End changed block.
 
   IF(tenddec) THEN
   DO j = j_start, j_end
