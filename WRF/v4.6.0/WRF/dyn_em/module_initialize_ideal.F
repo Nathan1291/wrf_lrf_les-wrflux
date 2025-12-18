@@ -924,9 +924,7 @@ CONTAINS
   xe=xs + 6
   ys=jde/2 -3
   ye=ys + 6
-  ! Changed Wrflux.
-  mtn_ht = config_flags%hm
-  ! End changed block.
+  mtn_ht = 500
 #ifdef MTN
   DO j=max(ys,jds),min(ye,jde-1)
   DO i=max(xs,ids),min(xe,ide-1)
